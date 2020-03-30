@@ -683,6 +683,8 @@ class SqliteDAO extends DAO {
   getUser (
     filter,
     {
+      isNotSubAccount,
+      isSubAccount,
       isFilledSubUsers,
       sort = ['_id']
     } = {}
@@ -691,6 +693,8 @@ class SqliteDAO extends DAO {
       filter,
       {
         isFoundOne: true,
+        isNotSubAccount,
+        isSubAccount,
         isFilledSubUsers,
         sort
       }
@@ -703,6 +707,8 @@ class SqliteDAO extends DAO {
   getUsers (
     filter,
     {
+      isNotSubAccount,
+      isSubAccount,
       isFilledSubUsers,
       sort = ['_id'],
       limit
@@ -711,6 +717,8 @@ class SqliteDAO extends DAO {
     return this._getUsers(
       filter,
       {
+        isNotSubAccount,
+        isSubAccount,
         isFilledSubUsers,
         sort,
         limit
@@ -719,26 +727,17 @@ class SqliteDAO extends DAO {
   }
 
   async _getUsers (
-    data,
+    filter,
     {
       isFoundOne,
+      isNotSubAccount,
+      isSubAccount,
       isFilledSubUsers,
       sort = ['_id'],
       limit
     } = {}
   ) {
     const userTableAlias = 'u'
-    const {
-      isNotSubAccount,
-      isSubAccount
-    } = { ...data }
-    const filter = omit(data, [
-      'isNotSubAccount',
-      'isSubAccount',
-      'passwordHash',
-      'apiKey',
-      'apiSecret'
-    ])
     const {
       limit: _limit,
       limitVal
@@ -771,16 +770,38 @@ class SqliteDAO extends DAO {
       ${_limit}`
 
     return this._beginTrans(async () => {
-      const res = isFoundOne
+      const _res = isFoundOne
         ? await this._get(sql, values)
         : await this._all(sql, values)
 
       if (
-        !res &&
-        typeof res !== 'object'
+        !_res &&
+        typeof _res !== 'object'
       ) {
-        return res
+        return _res
       }
+
+      const res = isFoundOne
+        ? {
+          ..._res,
+          active: !!_res.active,
+          isDataFromDb: !!_res.isDataFromDb,
+          isSubAccount: !!_res.isSubAccount
+        }
+        : _res.map((user) => {
+          const {
+            active,
+            isDataFromDb,
+            isSubAccount
+          } = { ...user }
+
+          return {
+            ...user,
+            active: !!active,
+            isDataFromDb: !!isDataFromDb,
+            isSubAccount: !!isSubAccount
+          }
+        })
 
       const usersFilledSubUsers = isFilledSubUsers
         ? await this._fillSubUsers(res)
