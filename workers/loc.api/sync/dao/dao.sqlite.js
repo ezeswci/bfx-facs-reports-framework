@@ -43,8 +43,9 @@ const {
   getSubQuery,
   filterModelNameMap,
   getTableCreationQuery,
-  pickUserData,
-  isContainedSameMts
+  isContainedSameMts,
+  getTriggerCreationQuery,
+  pickUserData
 } = require('./helpers')
 const {
   RemoveListElemsError,
@@ -161,6 +162,15 @@ class SqliteDAO extends DAO {
     }
   }
 
+  async _createTriggerIfNotExists () {
+    const models = this._getModelsMap({ omittedFields: null })
+    const sqlArr = getTriggerCreationQuery(models, true)
+
+    for (const sql of sqlArr) {
+      await this._run(sql)
+    }
+  }
+
   async _createIndexisIfNotExists () {
     for (const currItem of this._getMethodCollMap()) {
       const syncSchema = currItem[1]
@@ -270,6 +280,7 @@ class SqliteDAO extends DAO {
     await this._beginTrans(async () => {
       await this._createTablesIfNotExists()
       await this._createIndexisIfNotExists()
+      await this._createTriggerIfNotExists()
       await this.setCurrDbVer(this.syncSchema.SUPPORTED_DB_VERSION)
     })
   }
