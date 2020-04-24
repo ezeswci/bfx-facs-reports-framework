@@ -3,9 +3,8 @@
 const {
   mixUserIdToArrData,
   convertDataType,
-  pickUserData,
-  checkUserId,
-  isContainedSameMts
+  isContainedSameMts,
+  mapObjBySchema
 } = require('./utils')
 const {
   serializeVal,
@@ -31,6 +30,7 @@ const getTimeframeFilter = require('./get-timeframe-filter')
 module.exports = {
   mixUserIdToArrData,
   convertDataType,
+  mapObjBySchema,
   serializeVal,
   deserializeVal,
   getWhereQuery,
@@ -48,8 +48,6 @@ module.exports = {
   getStatusMessagesFilter,
   getTableCreationQuery,
   getTriggerCreationQuery,
-  pickUserData,
-  checkUserId,
-  getTimeframeFilter,
-  isContainedSameMts
+  isContainedSameMts,
+  getTimeframeFilter
 }
