@@ -49,7 +49,8 @@ const {
   filterModelNameMap,
   getTableCreationQuery,
   pickUserData,
-  checkUserId
+  checkUserId,
+  isContainedSameMts
 } = require('./helpers')
 const {
   RemoveListElemsError,
@@ -528,7 +529,8 @@ class SqliteDAO extends DAO {
       isPublic = false,
       additionalModel,
       schema = {},
-      isExcludePrivate = true
+      isExcludePrivate = true,
+      isNotConsideredSameMts
     } = {}
   ) {
     const filterModelName = filterModelNameMap.get(method)
@@ -607,21 +609,53 @@ class SqliteDAO extends DAO {
     const res = convertDataType(convertedDataStructure)
 
     if (isPrepareResponse) {
-      const symbols = (
-        params.symbol &&
-        Array.isArray(params.symbol) &&
-        params.symbol.length > 1
-      ) ? params.symbol : []
-
-      return this.prepareResponse(
+      const _isContainedSameMts = isContainedSameMts(
         res,
         dateFieldName,
-        params.limit,
-        params.notThrowError,
-        params.notCheckNextPage,
-        symbols,
-        symbolFieldName,
-        name
+        params.limit
+      )
+
+      if (
+        isNotConsideredSameMts ||
+        !_isContainedSameMts
+      ) {
+        const symbols = (
+          params.symbol &&
+          Array.isArray(params.symbol) &&
+          params.symbol.length > 1
+        ) ? params.symbol : []
+
+        return this.prepareResponse(
+          res,
+          dateFieldName,
+          params.limit,
+          params.notThrowError,
+          params.notCheckNextPage,
+          symbols,
+          symbolFieldName,
+          name
+        )
+      }
+
+      const _args = {
+        ...args,
+        params: {
+          ...args.params,
+          limit: maxLimit
+        }
+      }
+
+      return this.findInCollBy(
+        method,
+        _args,
+        {
+          isPrepareResponse,
+          isPublic,
+          additionalModel,
+          schema,
+          isExcludePrivate,
+          isNotConsideredSameMts: true
+        }
       )
     }
 
