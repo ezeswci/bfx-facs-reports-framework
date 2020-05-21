@@ -4,7 +4,9 @@ const checkParams = require('./check-params')
 const {
   checkParamsAuth,
   tryParseJSON,
-  collObjToArr
+  collObjToArr,
+  refreshObj,
+  mapObjBySchema
 } = require('./utils')
 const {
   isEnotfoundError,
@@ -13,7 +15,8 @@ const {
 const {
   isSubAccountApiKeys,
   getAuthFromSubAccountAuth,
-  getSubAccountAuthFromAuth
+  getSubAccountAuthFromAuth,
+  filterSubUsers
 } = require('./sub-account-auth')
 
 module.exports = {
@@ -21,9 +24,12 @@ module.exports = {
   checkParamsAuth,
   tryParseJSON,
   collObjToArr,
+  refreshObj,
+  mapObjBySchema,
   isEnotfoundError,
   isEaiAgainError,
   isSubAccountApiKeys,
   getAuthFromSubAccountAuth,
-  getSubAccountAuthFromAuth
+  getSubAccountAuthFromAuth,
+  filterSubUsers
 }

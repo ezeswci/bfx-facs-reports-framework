@@ -18,14 +18,12 @@ class PerformingLoan {
     dao,
     ALLOWED_COLLS,
     syncSchema,
-    FOREX_SYMBS,
-    authenticator
+    FOREX_SYMBS
   ) {
     this.dao = dao
     this.ALLOWED_COLLS = ALLOWED_COLLS
     this.syncSchema = syncSchema
     this.FOREX_SYMBS = FOREX_SYMBS
-    this.authenticator = authenticator
 
     this.tradesMethodColl = this.syncSchema.getMethodCollMap()
       .get('_getLedgers')
@@ -40,8 +38,7 @@ class PerformingLoan {
       $eq: { _isMarginFundingPayment: 1 }
     }
   }) {
-    const user = await this.authenticator
-      .verifyRequestUser({ auth })
+    const user = await this.dao.checkAuthInDb({ auth })
 
     const symbFilter = (
       Array.isArray(symbol) &&
@@ -266,6 +263,5 @@ decorate(inject(TYPES.DAO), PerformingLoan, 0)
 decorate(inject(TYPES.ALLOWED_COLLS), PerformingLoan, 1)
 decorate(inject(TYPES.SyncSchema), PerformingLoan, 2)
 decorate(inject(TYPES.FOREX_SYMBS), PerformingLoan, 3)
-decorate(inject(TYPES.Authenticator), PerformingLoan, 4)
 
 module.exports = PerformingLoan

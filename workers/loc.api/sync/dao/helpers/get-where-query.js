@@ -60,15 +60,10 @@ const _getCompareOperator = (
 const _getKeysAndValuesForWhereQuery = (
   filter,
   origFieldName,
-  isArr,
-  alias
+  isArr
 ) => {
-  const _alias = alias && typeof alias === 'string'
-    ? `${alias}_`
-    : ''
-
   if (!isArr) {
-    const key = `$${_alias}${origFieldName}`
+    const key = `$${origFieldName}`
     const val = serializeVal(filter[origFieldName])
     const subValues = val === null
       ? {}
@@ -79,7 +74,7 @@ const _getKeysAndValuesForWhereQuery = (
 
   const subValues = {}
   const preKey = filter[origFieldName].map((item, j) => {
-    const subKey = `$${_alias}${origFieldName}_${j}`
+    const subKey = `$${origFieldName}_${j}`
     subValues[subKey] = serializeVal(item)
 
     return subKey
@@ -92,8 +87,7 @@ const _getKeysAndValuesForWhereQuery = (
 
 const _getIsNullOperator = (
   fieldName,
-  filter,
-  alias
+  filter
 ) => {
   if (
     (
@@ -107,9 +101,7 @@ const _getIsNullOperator = (
   ) {
     return false
   }
-  const _alias = alias && typeof alias === 'string'
-    ? `${alias}_`
-    : ''
+
   const operator = fieldName === FILTER_CONDITIONS.IS_NOT_NULL
     ? SQL_OPERATORS.IS_NOT_NULL
     : SQL_OPERATORS.IS_NULL
@@ -118,7 +110,7 @@ const _getIsNullOperator = (
     : [filter[fieldName]]
 
   return valueArr
-    .map(name => `${_alias}${name} ${operator}`)
+    .map(name => `${name} ${operator}`)
     .join(` ${SQL_OPERATORS.AND} `)
 }
 
@@ -222,12 +214,8 @@ const _getWhereQueryAndValues = (
   accum,
   isArr = false,
   fieldsNamesToDisableCaseSensitivity,
-  alias,
   condName = ''
 ) => {
-  const _alias = alias && typeof alias === 'string'
-    ? `${alias}.`
-    : ''
   const _compareOperator = _getCompareOperator(
     origFieldName,
     isArr
@@ -257,8 +245,7 @@ const _getWhereQueryAndValues = (
   } = _getKeysAndValuesForWhereQuery(
     _filter,
     _fieldNameWithCondName,
-    isArr,
-    alias
+    isArr
   )
   const {
     compareOperator,
@@ -274,7 +261,7 @@ const _getWhereQueryAndValues = (
 
   return {
     subValues,
-    subQuery: `${accum}${op}${_alias}${_fieldName} ${compareOperator}${key}`
+    subQuery: `${accum}${op}${_fieldName} ${compareOperator}${key}`
   }
 }
 
@@ -346,8 +333,7 @@ const _getFieldsNamesToDisableCaseSensitivity = (
 module.exports = (
   filter = {},
   isNotSetWhereClause,
-  requestedFilter,
-  alias
+  requestedFilter
 ) => {
   let values = {}
 
@@ -378,7 +364,7 @@ module.exports = (
   const where = keys.reduce(
     (accum, curr, i) => {
       const isArr = Array.isArray(_filter[curr])
-      const isNullOp = _getIsNullOperator(curr, _filter, alias)
+      const isNullOp = _getIsNullOperator(curr, _filter)
       const op = i > 0 ? ` ${operator} ` : ''
 
       if (isNullOp) {
@@ -409,7 +395,6 @@ module.exports = (
               condAccum,
               isCondArr,
               fieldsNamesToDisableCaseSensitivity,
-              alias,
               currCond
             )
 
@@ -430,8 +415,7 @@ module.exports = (
         filter,
         accum,
         isArr,
-        fieldsNamesToDisableCaseSensitivity,
-        alias
+        fieldsNamesToDisableCaseSensitivity
       )
 
       values = { ...values, ...subValues }

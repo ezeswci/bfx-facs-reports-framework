@@ -17,14 +17,17 @@ const paramsSchemaForCreateSubAccount = {
       maxItems: 10,
       items: {
         type: 'object',
+        required: ['apiKey', 'apiSecret'],
         properties: {
-          apiKey: { type: 'string' },
-          apiSecret: { type: 'string' },
-          token: { type: 'string' }
+          apiKey: {
+            type: 'string'
+          },
+          apiSecret: {
+            type: 'string'
+          }
         }
       }
-    },
-    subAccountPassword: { type: 'string' }
+    }
   }
 }
 

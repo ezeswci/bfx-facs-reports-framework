@@ -3,8 +3,9 @@
 const {
   mixUserIdToArrData,
   convertDataType,
-  isContainedSameMts,
-  mapObjBySchema
+  pickUserData,
+  checkUserId,
+  isContainedSameMts
 } = require('./utils')
 const {
   serializeVal,
@@ -24,13 +25,11 @@ const SQL_OPERATORS = require('./sql.operators')
 const getSymbolFilter = require('./get-symbol-filter')
 const getStatusMessagesFilter = require('./get-status-messages-filter')
 const getTableCreationQuery = require('./get-table-creation-query')
-const getTriggerCreationQuery = require('./get-trigger-creation-query')
 const getTimeframeFilter = require('./get-timeframe-filter')
 
 module.exports = {
   mixUserIdToArrData,
   convertDataType,
-  mapObjBySchema,
   serializeVal,
   deserializeVal,
   getWhereQuery,
@@ -47,7 +46,8 @@ module.exports = {
   getSymbolFilter,
   getStatusMessagesFilter,
   getTableCreationQuery,
-  getTriggerCreationQuery,
-  isContainedSameMts,
-  getTimeframeFilter
+  pickUserData,
+  checkUserId,
+  getTimeframeFilter,
+  isContainedSameMts
 }

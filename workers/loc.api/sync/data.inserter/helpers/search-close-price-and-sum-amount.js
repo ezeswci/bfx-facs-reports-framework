@@ -18,13 +18,13 @@ module.exports = (
   end,
   id
 }) => {
-  const { auth } = { ...args }
-  const { session: user } = { ...auth }
-  const { subUser } = { ...user }
+  const { auth, subAccountAuth } = { ...args }
+  const { apiKey, apiSecret, subUser } = { ...subAccountAuth }
   const { _id: subUserId } = { ...subUser }
   const subUserIdFilter = Number.isInteger(subUserId)
     ? { subUserId }
     : {}
+  const user = await dao.checkAuthInDb({ auth: { apiKey, apiSecret } })
   const symbArr = Array.isArray(symbol)
     ? symbol
     : [symbol]
@@ -48,11 +48,10 @@ module.exports = (
 
   const {
     res: positionsAudit
-  } = await rService._getPositionsAudit(
+  } = await rService.getPositionsAudit(
+    null,
     {
-      auth: (subUser && typeof subUser === 'object')
-        ? subUser
-        : user,
+      auth,
       params: {
         id: [id],
         limit: 2,

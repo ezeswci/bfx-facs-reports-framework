@@ -1,27 +1,25 @@
 'use strict'
 
-const {
-  AuthError
-} = require('bfx-report/workers/loc.api/errors')
+const { pick } = require('lodash')
 
 const {
-  ObjectMappingError
+  SubAccountCreatingError
 } = require('../../../errors')
-
 const { deserializeVal } = require('./serialization')
 
-const mixUserIdToArrData = (
+const mixUserIdToArrData = async (
+  dao,
   auth,
-  data = []
+  data = [],
+  isUsedActiveAndInactiveUsers
 ) => {
   if (auth) {
-    const { _id, subUser } = { ...auth }
+    const { subUser } = { ...auth }
     const { _id: subUserId } = { ...subUser }
-
-    if (!Number.isInteger(_id)) {
-      throw new AuthError()
-    }
-
+    const { _id } = await dao.checkAuthInDb(
+      { auth },
+      !isUsedActiveAndInactiveUsers
+    )
     const params = Number.isInteger(subUserId)
       ? { subUserId }
       : {}
@@ -60,37 +58,28 @@ const convertDataType = (
   return arr
 }
 
-const mapObjBySchema = (obj, schema = {}) => {
-  const err = new ObjectMappingError()
-
-  if (
-    !obj ||
-    typeof obj !== 'object' ||
-    !schema ||
-    typeof schema !== 'object'
-  ) {
-    throw err
+const pickUserData = (user) => {
+  return {
+    ...pick(
+      user,
+      [
+        'apiKey',
+        'apiSecret',
+        'email',
+        'timezone',
+        'username',
+        'id'
+      ]
+    )
   }
+}
 
-  const map = Array.isArray(schema)
-    ? schema.map(item => [item, null])
-    : Object.entries(schema)
+const checkUserId = (user = {}) => {
+  const { _id } = { ...user }
 
-  return map.reduce((accum, [key, val]) => {
-    const _val = val && typeof val === 'string' ? val : key
-
-    if (
-      !key ||
-      typeof key !== 'string' ||
-      typeof obj[_val] === 'undefined'
-    ) {
-      throw err
-    }
-
-    accum[key] = obj[_val]
-
-    return accum
-  }, {})
+  if (!Number.isInteger(_id)) {
+    throw new SubAccountCreatingError()
+  }
 }
 
 const isContainedSameMts = (
@@ -117,6 +106,7 @@ const isContainedSameMts = (
 module.exports = {
   mixUserIdToArrData,
   convertDataType,
-  isContainedSameMts,
-  mapObjBySchema
+  pickUserData,
+  checkUserId,
+  isContainedSameMts
 }

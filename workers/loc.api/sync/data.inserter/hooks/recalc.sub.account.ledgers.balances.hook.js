@@ -23,23 +23,17 @@ class RecalcSubAccountLedgersBalancesHook extends DataInserterHook {
     this.TABLES_NAMES = TABLES_NAMES
   }
 
-  _getSubUsersIdsByMasterUserId (auth, userId) {
-    if (!Number.isInteger(userId)) {
+  _getSubUsersIdsByMasterUserId (auth, id) {
+    if (!Number.isInteger(id)) {
       return null
     }
 
     return [...auth]
-      .reduce((accum, [key, payload]) => {
-        const {
-          _id: masterUserId,
-          isSubAccount,
-          subUser
-        } = { ...payload }
+      .reduce((accum, [key, { masterUserId, subUser }]) => {
         const { _id } = { ...subUser }
 
         if (
-          isSubAccount &&
-          masterUserId === userId &&
+          masterUserId === id &&
           Number.isInteger(_id)
         ) {
           accum.push(_id)

@@ -2,7 +2,8 @@
 
 const {
   decorate,
-  injectable
+  injectable,
+  inject
 } = require('inversify')
 const {
   orderBy,
@@ -17,10 +18,21 @@ const {
 } = require('bfx-report/workers/loc.api/errors')
 
 const {
+  isSubAccountApiKeys
+} = require('../../helpers')
+const {
   DatePropNameError
 } = require('../../errors')
 
+const TYPES = require('../../di/types')
+
 class SubAccountApiData {
+  constructor (
+    dao
+  ) {
+    this.dao = dao
+  }
+
   _hasId (id) {
     return (
       Number.isInteger(id) ||
@@ -263,10 +275,6 @@ class SubAccountApiData {
       idFieldNameForFinding,
       datePropName
     } = { ...opts }
-    const {
-      isSubAccount,
-      subUsers
-    } = { ...auth }
 
     if (
       !datePropName ||
@@ -274,12 +282,15 @@ class SubAccountApiData {
     ) {
       throw new DatePropNameError()
     }
-    if (!isSubAccount) {
+    if (!isSubAccountApiKeys(auth)) {
       return method(args)
     }
     if (typeof checkParamsFn === 'function') {
       checkParamsFn(args)
     }
+
+    const subUsers = await this.dao
+      .getSubUsersByMasterUserApiKeys(auth)
 
     if (
       !Array.isArray(subUsers) ||
@@ -323,5 +334,6 @@ class SubAccountApiData {
 }
 
 decorate(injectable(), SubAccountApiData)
+decorate(inject(TYPES.DAO), SubAccountApiData, 0)
 
 module.exports = SubAccountApiData

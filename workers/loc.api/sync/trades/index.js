@@ -20,15 +20,13 @@ class Trades {
     ALLOWED_COLLS,
     syncSchema,
     FOREX_SYMBS,
-    currencyConverter,
-    authenticator
+    currencyConverter
   ) {
     this.dao = dao
     this.ALLOWED_COLLS = ALLOWED_COLLS
     this.syncSchema = syncSchema
     this.FOREX_SYMBS = FOREX_SYMBS
     this.currencyConverter = currencyConverter
-    this.authenticator = authenticator
 
     this.tradesMethodColl = this.syncSchema.getMethodCollMap()
       .get('_getTrades')
@@ -40,8 +38,7 @@ class Trades {
     end,
     symbol
   }) {
-    const user = await this.authenticator
-      .verifyRequestUser({ auth })
+    const user = await this.dao.checkAuthInDb({ auth })
 
     const symbFilter = (
       Array.isArray(symbol) &&
@@ -315,6 +312,5 @@ decorate(inject(TYPES.ALLOWED_COLLS), Trades, 1)
 decorate(inject(TYPES.SyncSchema), Trades, 2)
 decorate(inject(TYPES.FOREX_SYMBS), Trades, 3)
 decorate(inject(TYPES.CurrencyConverter), Trades, 4)
-decorate(inject(TYPES.Authenticator), Trades, 5)
 
 module.exports = Trades

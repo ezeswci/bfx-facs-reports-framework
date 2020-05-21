@@ -23,8 +23,7 @@ class WinLoss {
     wallets,
     balanceHistory,
     positionsSnapshot,
-    FOREX_SYMBS,
-    authenticator
+    FOREX_SYMBS
   ) {
     this.dao = dao
     this.syncSchema = syncSchema
@@ -33,7 +32,6 @@ class WinLoss {
     this.balanceHistory = balanceHistory
     this.positionsSnapshot = positionsSnapshot
     this.FOREX_SYMBS = FOREX_SYMBS
-    this.authenticator = authenticator
   }
 
   async _getPlFromPositionsSnapshot (args) {
@@ -266,8 +264,7 @@ class WinLoss {
       end = Date.now()
     } = {}
   } = {}) {
-    const user = await this.authenticator
-      .verifyRequestUser({ auth })
+    const user = await this.dao.checkAuthInDb({ auth })
 
     const args = {
       auth,
@@ -393,6 +390,5 @@ decorate(inject(TYPES.Wallets), WinLoss, 3)
 decorate(inject(TYPES.BalanceHistory), WinLoss, 4)
 decorate(inject(TYPES.PositionsSnapshot), WinLoss, 5)
 decorate(inject(TYPES.FOREX_SYMBS), WinLoss, 6)
-decorate(inject(TYPES.Authenticator), WinLoss, 7)
 
 module.exports = WinLoss

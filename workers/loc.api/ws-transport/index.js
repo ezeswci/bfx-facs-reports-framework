@@ -22,8 +22,7 @@ class WSTransport {
     dao,
     link,
     grcBfxOpts,
-    TABLES_NAMES,
-    authenticator
+    TABLES_NAMES
   ) {
     this.wsPort = wsPort
     this.rService = rService
@@ -31,7 +30,6 @@ class WSTransport {
     this.link = link
     this.opts = { ...grcBfxOpts }
     this.TABLES_NAMES = TABLES_NAMES
-    this.authenticator = authenticator
 
     this._active = false
     this._sockets = new Map()
@@ -93,7 +91,7 @@ class WSTransport {
       const { method = '' } = _payload
       const args = omit(_payload, ['method'])
 
-      if (method === 'signIn') {
+      if (method === 'login') {
         return
       }
       if (
@@ -143,29 +141,22 @@ class WSTransport {
           if (
             !payload ||
             typeof payload !== 'object' ||
-            payload.method !== 'signIn' ||
+            payload.method !== 'login' ||
             !payload.auth ||
             typeof payload.auth !== 'object'
           ) {
             return
           }
 
-          const user = await this.authenticator.signIn(
+          const user = await this.rService.login(
+            null,
             { auth: payload.auth },
-            { isReturnedUser: true }
+            null,
+            true
           )
-          const {
-            email,
-            isSubAccount,
-            token
-          } = { ...user }
 
           this._auth.set(sid, user)
-          this.transport.sendReply(socket, rid, null, {
-            email,
-            isSubAccount,
-            token
-          })
+          this.transport.sendReply(socket, rid, null, user.email)
         } catch (err) {
           this.transport.sendReply(socket, rid, err)
         }
@@ -181,9 +172,6 @@ class WSTransport {
         }
 
         socket.isAlive = false
-
-        if (!this._active) return
-
         socket.ping(null, false)
       })
     }, 10000)
@@ -196,17 +184,20 @@ class WSTransport {
   }
 
   _getFreshUsersDataFromDb () {
-    const usersIds = [...this._auth].map(([sid, user]) => user._id)
+    const apiKey = [...this._auth].map(([sid, user]) => user.apiKey)
 
-    return this.authenticator.getUsers(
-      { $in: { _id: usersIds } }
+    return this.dao.getElemsInCollBy(
+      this.TABLES_NAMES.USERS,
+      {
+        $or: { apiKey }
+      }
     )
   }
 
   _findUser (auth = {}, freshUsersDate = []) {
-    const freshData = freshUsersDate.find(({ _id, email }) => (
-      auth._id === _id &&
-      auth.email === email
+    const freshData = freshUsersDate.find(({ apiKey, apiSecret }) => (
+      auth.apiKey === apiKey &&
+      auth.apiSecret === apiSecret
     ))
 
     return {
@@ -335,6 +326,5 @@ decorate(inject(TYPES.DAO), WSTransport, 2)
 decorate(inject(TYPES.Link), WSTransport, 3)
 decorate(inject(TYPES.GRC_BFX_OPTS), WSTransport, 4)
 decorate(inject(TYPES.TABLES_NAMES), WSTransport, 5)
-decorate(inject(TYPES.Authenticator), WSTransport, 6)
 
 module.exports = WSTransport

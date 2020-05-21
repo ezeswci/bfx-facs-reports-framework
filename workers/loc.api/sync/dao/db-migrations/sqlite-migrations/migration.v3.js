@@ -1,7 +1,7 @@
 'use strict'
 
 const AbstractMigration = require('./abstract.migration')
-const { getSqlArrToModifyColumns } = require('./helpers')
+const { getSqlArrToRemoveColumns } = require('./helpers')
 
 class MigrationV3 extends AbstractMigration {
   /**
@@ -114,7 +114,7 @@ class MigrationV3 extends AbstractMigration {
       'DROP INDEX fundingCreditHistory_id_mtsUpdate_user_id',
       'DROP INDEX positionsHistory_id_mtsUpdate_user_id',
 
-      ...getSqlArrToModifyColumns(
+      ...getSqlArrToRemoveColumns(
         'ledgers',
         {
           _id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',
@@ -137,7 +137,7 @@ class MigrationV3 extends AbstractMigration {
             ON DELETE CASCADE`
         }
       ),
-      ...getSqlArrToModifyColumns(
+      ...getSqlArrToRemoveColumns(
         'trades',
         {
           _id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',
@@ -160,7 +160,7 @@ class MigrationV3 extends AbstractMigration {
             ON DELETE CASCADE`
         }
       ),
-      ...getSqlArrToModifyColumns(
+      ...getSqlArrToRemoveColumns(
         'fundingTrades',
         {
           _id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',
@@ -180,7 +180,7 @@ class MigrationV3 extends AbstractMigration {
             ON DELETE CASCADE`
         }
       ),
-      ...getSqlArrToModifyColumns(
+      ...getSqlArrToRemoveColumns(
         'orders',
         {
           _id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',
@@ -212,7 +212,7 @@ class MigrationV3 extends AbstractMigration {
             ON DELETE CASCADE`
         }
       ),
-      ...getSqlArrToModifyColumns(
+      ...getSqlArrToRemoveColumns(
         'movements',
         {
           _id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',
@@ -235,7 +235,7 @@ class MigrationV3 extends AbstractMigration {
             ON DELETE CASCADE`
         }
       ),
-      ...getSqlArrToModifyColumns(
+      ...getSqlArrToRemoveColumns(
         'fundingOfferHistory',
         {
           _id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',
@@ -263,7 +263,7 @@ class MigrationV3 extends AbstractMigration {
             ON DELETE CASCADE`
         }
       ),
-      ...getSqlArrToModifyColumns(
+      ...getSqlArrToRemoveColumns(
         'fundingLoanHistory',
         {
           _id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',
@@ -292,7 +292,7 @@ class MigrationV3 extends AbstractMigration {
             ON DELETE CASCADE`
         }
       ),
-      ...getSqlArrToModifyColumns(
+      ...getSqlArrToRemoveColumns(
         'fundingCreditHistory',
         {
           _id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',
@@ -322,7 +322,7 @@ class MigrationV3 extends AbstractMigration {
             ON DELETE CASCADE`
         }
       ),
-      ...getSqlArrToModifyColumns(
+      ...getSqlArrToRemoveColumns(
         'positionsHistory',
         {
           _id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',
@@ -349,7 +349,7 @@ class MigrationV3 extends AbstractMigration {
             ON DELETE CASCADE`
         }
       ),
-      ...getSqlArrToModifyColumns(
+      ...getSqlArrToRemoveColumns(
         'logins',
         {
           _id: 'INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT',

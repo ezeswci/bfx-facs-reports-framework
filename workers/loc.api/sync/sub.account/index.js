@@ -1,11 +1,15 @@
 'use strict'
 
+const { isEmpty } = require('lodash')
+
 const {
   isSubAccountApiKeys,
-  getSubAccountAuthFromAuth
+  getSubAccountAuthFromAuth,
+  getAuthFromSubAccountAuth
 } = require('../../helpers')
 const {
-  SubAccountCreatingError
+  SubAccountCreatingError,
+  SubAccountRemovingError
 } = require('../../errors')
 
 const {
@@ -20,191 +24,96 @@ class SubAccount {
   constructor (
     dao,
     TABLES_NAMES,
-    authenticator
+    rService
   ) {
     this.dao = dao
     this.TABLES_NAMES = TABLES_NAMES
-    this.authenticator = authenticator
+    this.rService = rService
   }
 
   async createSubAccount (args) {
-    const { auth, params } = { ...args }
-    const {
-      email,
-      password,
-      token
-    } = { ...auth }
-    const {
-      subAccountPassword,
-      subAccountApiKeys
-    } = { ...params }
+    const { params } = { ...args }
+    const { subAccountApiKeys } = { ...params }
 
-    const masterUser = await this.authenticator
-      .verifyUser(
-        {
-          auth: {
-            email,
-            password,
-            token
-          }
-        },
-        {
-          projection: [
-            'id',
-            'email',
-            'apiKey',
-            'apiSecret',
-            'timezone',
-            'username',
-            'password'
-          ],
-          isDecryptedApiKeys: true,
-          isReturnedPassword: true
-        }
-      )
-
-    const _subAccountPassword = (
-      subAccountPassword &&
-      typeof subAccountPassword === 'string'
-    )
-      ? subAccountPassword
-      : masterUser.password
+    const masterUser = await this.dao.checkAuthInDb(args)
 
     if (
-      isSubAccountApiKeys(masterUser) ||
       !Array.isArray(subAccountApiKeys) ||
-      subAccountApiKeys.length === 0 ||
-      subAccountApiKeys.some(isSubAccountApiKeys)
+      subAccountApiKeys.length === 0
     ) {
       throw new SubAccountCreatingError()
     }
 
-    const subAccount = {
-      ...masterUser,
-      ...getSubAccountAuthFromAuth(masterUser),
-      password: _subAccountPassword
-    }
+    const apiUsersPromises = subAccountApiKeys.map((auth) => {
+      return this.rService._checkAuthInApi({ auth })
+    })
 
-    return this.dao.executeQueriesInTrans(async () => {
-      const subAccountUser = await this.authenticator
-        .signUp(
-          { auth: subAccount },
-          {
-            isDisabledApiKeysVerification: true,
-            isReturnedFullUserData: true,
-            isNotSetSession: true,
-            isSubAccount: true,
-            isNotInTrans: true
-          }
-        )
-      const { _id, email, token } = subAccountUser
-
-      const subUsersAuth = [
-        ...subAccountApiKeys,
-        masterUser
-      ]
-
-      const subUsers = []
-
-      for (const subUserAuth of subUsersAuth) {
-        const {
-          apiKey,
-          apiSecret,
-          password,
-          email,
-          token
-        } = { ...subUserAuth }
-
-        const isAuthCheckedInDb = (
-          (
-            email &&
-            typeof email === 'string' &&
-            password &&
-            typeof password === 'string'
-          ) ||
-          (
-            token &&
-            typeof token === 'string'
-          )
-        )
-        const auth = isAuthCheckedInDb
-          ? await this.authenticator.verifyUser(
-            {
-              auth: {
-                email,
-                password,
-                token
-              }
-            },
-            {
-              projection: [
-                '_id',
-                'id',
-                'email',
-                'apiKey',
-                'apiSecret',
-                'timezone',
-                'username'
-              ],
-              isDecryptedApiKeys: true,
-              isNotInTrans: true
-            }
-          )
-          : { apiKey, apiSecret }
-
-        if (
-          subUsers.some(item => (
-            auth.apiKey === item.apiKey &&
-            auth.apiSecret === item.apiSecret
-          ))
-        ) {
-          continue
-        }
-
-        const subUser = await this.authenticator
-          .signUp(
-            {
-              auth: {
-                ...auth,
-                password: _subAccountPassword
-              }
-            },
-            {
-              isDisabledApiKeysVerification: isAuthCheckedInDb,
-              isReturnedFullUserData: true,
-              isNotSetSession: true,
-              isSubUser: true,
-              isNotInTrans: true,
-              masterUserId: masterUser.id
-            }
-          )
-
-        subUsers.push(subUser)
-
-        await this.dao.insertElemToDb(
-          this.TABLES_NAMES.SUB_ACCOUNTS,
-          {
-            masterUserId: _id,
-            subUserId: subUser._id
-          }
-        )
-      }
-
-      this.authenticator
-        .setUserSession({ ...subAccountUser, subUsers })
+    const apiUsers = await Promise.all(apiUsersPromises)
+    const subUsers = apiUsers.map((apiUser, i) => {
+      const {
+        apiKey,
+        apiSecret
+      } = { ...subAccountApiKeys[i] }
 
       return {
-        email,
-        isSubAccount: true,
-        token
+        ...apiUser,
+        apiKey,
+        apiSecret
       }
     })
+
+    await this.dao.createSubAccount(
+      masterUser,
+      subUsers
+    )
+  }
+
+  async removeSubAccount (args) {
+    const { auth } = { ...args }
+
+    if (isSubAccountApiKeys(auth)) {
+      throw new SubAccountRemovingError()
+    }
+
+    const user = await this.dao.checkAuthInDb(args)
+    const masterUserAuth = getSubAccountAuthFromAuth(user)
+    const masterUser = await this.dao.checkAuthInDb(
+      { auth: masterUserAuth },
+      false
+    )
+
+    await this.dao.removeSubAccount(masterUser)
+  }
+
+  async hasSubAccount (args) {
+    const { auth } = { ...args }
+    const _auth = getAuthFromSubAccountAuth(auth)
+
+    try {
+      const user = await this.dao.checkAuthInDb(
+        { auth: _auth },
+        false
+      )
+      const masterUserAuth = getSubAccountAuthFromAuth(user)
+      const subUsers = await this.dao.getSubUsersByMasterUserApiKeys(
+        masterUserAuth
+      )
+      const hasSubUsersMoreThanOne = (
+        Array.isArray(subUsers) &&
+        subUsers.length > 0 &&
+        subUsers.every((sUser) => !isEmpty(sUser))
+      )
+
+      return hasSubUsersMoreThanOne
+    } catch (err) {
+      return false
+    }
   }
 }
 
 decorate(injectable(), SubAccount)
 decorate(inject(TYPES.DAO), SubAccount, 0)
 decorate(inject(TYPES.TABLES_NAMES), SubAccount, 1)
-decorate(inject(TYPES.Authenticator), SubAccount, 2)
+decorate(inject(TYPES.RService), SubAccount, 2)
 
 module.exports = SubAccount

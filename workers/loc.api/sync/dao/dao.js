@@ -80,6 +80,11 @@ class DAO {
   /**
    * @abstract
    */
+  async getLastElemFromDb () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
   async insertElemToDb () { throw new ImplementationError() }
 
   /**
@@ -90,7 +95,17 @@ class DAO {
   /**
    * @abstract
    */
+  async checkAuthInDb () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
   async findInCollBy () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
+  async getActiveUsers () { throw new ImplementationError() }
 
   /**
    * @abstract
@@ -100,17 +115,37 @@ class DAO {
   /**
    * @abstract
    */
-  async getUser () { throw new ImplementationError() }
-
-  /**
-   * @abstract
-   */
-  async getUsers () { throw new ImplementationError() }
-
-  /**
-   * @abstract
-   */
   async updateCollBy () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
+  async getSubUsersByMasterUserApiKeys () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
+  async createSubAccount () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
+  async removeSubAccount () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
+  async insertOrUpdateUser () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
+  async updateUserByAuth () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
+  async deactivateUser () { throw new ImplementationError() }
 
   /**
    * @abstract
@@ -130,7 +165,17 @@ class DAO {
   /**
    * @abstract
    */
-  async updateRecordOf () { throw new ImplementationError() }
+  async updateStateOf () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
+  async getFirstElemInCollBy () { throw new ImplementationError() }
+
+  /**
+   * @abstract
+   */
+  async updateProgress () { throw new ImplementationError() }
 
   /**
    * @abstract

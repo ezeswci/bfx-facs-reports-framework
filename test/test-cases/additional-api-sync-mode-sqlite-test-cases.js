@@ -20,29 +20,21 @@ module.exports = (
 ) => {
   const {
     basePath,
-    auth: {
-      email,
-      password,
-      isSubAccount
-    },
+    auth,
+    email,
     end,
     start
   } = params
-  const auth = { token: '' }
 
-  it('it should be successfully performed by the signIn method', async function () {
+  it('it should be successfully performed by the login method', async function () {
     this.timeout(5000)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
-        auth: {
-          email,
-          password,
-          isSubAccount
-        },
-        method: 'signIn',
+        auth,
+        method: 'login',
         id: 5
       })
       .expect('Content-Type', /json/)
@@ -50,19 +42,14 @@ module.exports = (
 
     assert.isObject(res.body)
     assert.propertyVal(res.body, 'id', 5)
-    assert.isObject(res.body.result)
-    assert.strictEqual(res.body.result.email, email)
-    assert.strictEqual(res.body.result.isSubAccount, isSubAccount)
-    assert.isString(res.body.result.token)
-
-    auth.token = res.body.result.token
+    assert.isOk(res.body.result === email)
   })
 
   it('it should be successfully performed by the enableSyncMode method', async function () {
     this.timeout(5000)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -81,7 +68,7 @@ module.exports = (
     this.timeout(60000)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -103,7 +90,7 @@ module.exports = (
     this.timeout(60000)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -126,7 +113,7 @@ module.exports = (
 
     while (true) {
       const res = await agent
-        .post(`${basePath}/json-rpc`)
+        .post(`${basePath}/get-data`)
         .type('json')
         .send({
           auth,
@@ -158,7 +145,7 @@ module.exports = (
 
     for (const params of paramsArr) {
       const res = await agent
-        .post(`${basePath}/json-rpc`)
+        .post(`${basePath}/get-data`)
         .type('json')
         .send({
           auth,
@@ -184,13 +171,13 @@ module.exports = (
   })
 
   it('it should be successfully performed by the getWinLoss method', async function () {
-    this.timeout(120000)
+    this.timeout(20000)
 
     const paramsArr = getParamsArrToTestTimeframeGrouping({ start, end })
 
     for (const params of paramsArr) {
       const res = await agent
-        .post(`${basePath}/json-rpc`)
+        .post(`${basePath}/get-data`)
         .type('json')
         .send({
           auth,
@@ -216,10 +203,10 @@ module.exports = (
   })
 
   it('it should be successfully performed by the getPositionsSnapshot method', async function () {
-    this.timeout(60000)
+    this.timeout(20000)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -257,10 +244,10 @@ module.exports = (
   })
 
   it('it should be successfully performed by the getFullSnapshotReport method', async function () {
-    this.timeout(60000)
+    this.timeout(20000)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -328,7 +315,7 @@ module.exports = (
   })
 
   it('it should be successfully performed by the getFullTaxReport method', async function () {
-    this.timeout(120000)
+    this.timeout(20000)
 
     const paramsArr = [
       { end, start },
@@ -337,7 +324,7 @@ module.exports = (
 
     for (const params of paramsArr) {
       const res = await agent
-        .post(`${basePath}/json-rpc`)
+        .post(`${basePath}/get-data`)
         .type('json')
         .send({
           auth,
@@ -418,13 +405,13 @@ module.exports = (
   })
 
   it('it should be successfully performed by the getTradedVolume method', async function () {
-    this.timeout(60000)
+    this.timeout(20000)
 
     const paramsArr = getParamsArrToTestTimeframeGrouping({ start, end })
 
     for (const params of paramsArr) {
       const res = await agent
-        .post(`${basePath}/json-rpc`)
+        .post(`${basePath}/get-data`)
         .type('json')
         .send({
           auth,
@@ -450,13 +437,13 @@ module.exports = (
   })
 
   it('it should be successfully performed by the getFeesReport method', async function () {
-    this.timeout(60000)
+    this.timeout(20000)
 
     const paramsArr = getParamsArrToTestTimeframeGrouping({ start, end })
 
     for (const params of paramsArr) {
       const res = await agent
-        .post(`${basePath}/json-rpc`)
+        .post(`${basePath}/get-data`)
         .type('json')
         .send({
           auth,
@@ -482,13 +469,13 @@ module.exports = (
   })
 
   it('it should be successfully performed by the getPerformingLoan method', async function () {
-    this.timeout(60000)
+    this.timeout(20000)
 
     const paramsArr = getParamsArrToTestTimeframeGrouping({ start, end })
 
     for (const params of paramsArr) {
       const res = await agent
-        .post(`${basePath}/json-rpc`)
+        .post(`${basePath}/get-data`)
         .type('json')
         .send({
           auth,
@@ -522,7 +509,7 @@ module.exports = (
     const aggrPromise = queueToPromise(params.aggregatorQueue)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -561,7 +548,7 @@ module.exports = (
     const aggrPromise = queueToPromise(params.aggregatorQueue)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -587,7 +574,7 @@ module.exports = (
     const aggrPromise = queueToPromise(params.aggregatorQueue)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -613,7 +600,7 @@ module.exports = (
     const aggrPromise = queueToPromise(params.aggregatorQueue)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -637,7 +624,7 @@ module.exports = (
     const aggrPromise = queueToPromise(params.aggregatorQueue)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -661,7 +648,7 @@ module.exports = (
     const aggrPromise = queueToPromise(params.aggregatorQueue)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -686,7 +673,7 @@ module.exports = (
     const aggrPromise = queueToPromise(params.aggregatorQueue)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -712,7 +699,7 @@ module.exports = (
     const aggrPromise = queueToPromise(params.aggregatorQueue)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,
@@ -738,7 +725,7 @@ module.exports = (
     const aggrPromise = queueToPromise(params.aggregatorQueue)
 
     const res = await agent
-      .post(`${basePath}/json-rpc`)
+      .post(`${basePath}/get-data`)
       .type('json')
       .send({
         auth,

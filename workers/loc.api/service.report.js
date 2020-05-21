@@ -60,10 +60,6 @@ class ReportService extends BaseReportService {
   _getCandles (args) {
     return super.getCandles(null, args)
   }
-
-  _getPositionsAudit (args) {
-    return super.getPositionsAudit(null, args)
-  }
 }
 
 module.exports = ReportService

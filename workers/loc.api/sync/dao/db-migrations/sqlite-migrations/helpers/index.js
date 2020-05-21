@@ -1,9 +1,9 @@
 'use strict'
 
-const getSqlArrToModifyColumns = require(
-  './get-sql-arr-to-modify-columns'
+const getSqlArrToRemoveColumns = require(
+  './get-sql-arr-to-remove-columns'
 )
 
 module.exports = {
-  getSqlArrToModifyColumns
+  getSqlArrToRemoveColumns
 }
