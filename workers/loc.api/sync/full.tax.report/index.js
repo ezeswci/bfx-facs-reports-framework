@@ -36,6 +36,7 @@ class FullTaxReport {
       this.ALLOWED_COLLS.MOVEMENTS,
       {
         filter: {
+          $eq: { status: 'COMPLETED' },
           $gte: { mtsUpdated: start },
           $lte: { mtsUpdated: end },
           user_id: user._id
