@@ -7,20 +7,33 @@ const {
 const normalizeApiData = (
   data = [],
   model,
-  cb = () => {}
+  parser = () => {}
 ) => {
-  return data.map(item => {
+  if (
+    !model ||
+    typeof model !== 'object' ||
+    Object.keys(model).length === 0
+  ) {
+    return data
+  }
+
+  const modelKeys = Object.keys(model)
+
+  if (modelKeys.length === 0) {
+    return data
+  }
+
+  return data.map((item) => {
     if (
-      typeof item !== 'object' ||
-      typeof model !== 'object' ||
-      Object.keys(model).length === 0
+      !item ||
+      typeof item !== 'object'
     ) {
       return item
     }
 
-    cb(item)
+    parser(item)
 
-    return pick(item, Object.keys(model))
+    return pick(item, modelKeys)
   })
 }
 
