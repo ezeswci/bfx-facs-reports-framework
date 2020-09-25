@@ -34,10 +34,20 @@ class ApiMiddleware {
     return typeof this.apiMiddlewareHandlerAfter[method] === 'function'
   }
 
+  _logTime (method) {
+    if (method) {
+      console.log('[METHOD]:'.bgBlue, method)
+    }
+
+    console.log('[TIME]:'.bgRed, new Date().toUTCString())
+  }
+
   _apiResHandler (method, apiRes) {
+    this._logTime(method)
+
     const increaseCount = method === SYNC_API_METHODS.LEDGERS
-      ? 1000
-      : 100
+      ? 2000
+      : 300
     const offset = 50000
 
     const syncSchema = this._methodCollMap.get(method)
