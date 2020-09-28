@@ -98,6 +98,60 @@ class SqliteDAO extends DAO {
     })
   }
 
+  _parallelize (cb) {
+    return new Promise((resolve, reject) => {
+      try {
+        if (typeof cb !== 'function') {
+          this.db.parallelize()
+          resolve()
+
+          return
+        }
+
+        this.db.parallelize(async function () {
+          try {
+            const res = await cb()
+
+            resolve(res)
+          } catch (err) {
+            reject(err)
+          }
+        })
+      } catch (err) {
+        reject(err)
+      }
+    })
+  }
+
+  _serialize (cb) {
+    return new Promise((resolve, reject) => {
+      try {
+        if (typeof cb !== 'function') {
+          this.db.serialize()
+          resolve()
+
+          return
+        }
+
+        this.db.serialize(async function () {
+          try {
+            const res = await cb()
+
+            resolve(res)
+          } catch (err) {
+            reject(err)
+          }
+        })
+      } catch (err) {
+        reject(err)
+      }
+    })
+  }
+
+  _transact () {
+    return this._run('BEGIN TRANSACTION')
+  }
+
   _commit () {
     return this._run('COMMIT')
   }
@@ -108,11 +162,14 @@ class SqliteDAO extends DAO {
 
   _proccesTrans (
     asyncExecQuery,
-    {
+    opts = {}
+  ) {
+    const {
+      isParallelize,
       beforeTransFn,
       afterTransFn
-    } = {}
-  ) {
+    } = { ...opts }
+
     return new Promise((resolve, reject) => {
       this.db.serialize(async () => {
         let isTransBegun = false
@@ -122,10 +179,13 @@ class SqliteDAO extends DAO {
             await beforeTransFn()
           }
 
-          await this._run('BEGIN TRANSACTION')
+          await this._transact()
           isTransBegun = true
 
-          const res = await asyncExecQuery()
+          const res = isParallelize
+            ? await this._parallelize(asyncExecQuery)
+            : await this._serialize(asyncExecQuery)
+
           await this._commit()
 
           if (typeof afterTransFn === 'function') {
@@ -161,17 +221,11 @@ class SqliteDAO extends DAO {
 
   async _beginTrans (
     asyncExecQuery,
-    {
-      beforeTransFn,
-      afterTransFn
-    } = {}
+    opts = {}
   ) {
     const _transactionPromise = this._manageTrans(
       asyncExecQuery,
-      {
-        beforeTransFn,
-        afterTransFn
-      }
+      opts
     )
     const length = this._transactionPromises
       .push(_transactionPromise)
@@ -554,10 +608,12 @@ class SqliteDAO extends DAO {
   async insertElemToDb (
     name,
     obj = {},
-    {
-      isReplacedIfExists
-    } = {}
+    opts = {}
   ) {
+    const {
+      isReplacedIfExists
+    } = { ...opts }
+
     const keys = Object.keys(obj)
     const projection = getProjectionQuery(keys)
     const {
@@ -580,14 +636,19 @@ class SqliteDAO extends DAO {
     name,
     auth,
     data = [],
-    { isReplacedIfExists } = {}
+    opts = {}
   ) {
+    const {
+      isReplacedIfExists
+    } = { ...opts }
     const _data = mixUserIdToArrData(
       auth,
       data
     )
 
     await this._beginTrans(async () => {
+      const promises = []
+
       for (const obj of _data) {
         const keys = Object.keys(obj)
 
@@ -595,13 +656,17 @@ class SqliteDAO extends DAO {
           continue
         }
 
-        await this.insertElemToDb(
+        const promise = this.insertElemToDb(
           name,
           obj,
           { isReplacedIfExists }
         )
+
+        promises.push(promise)
       }
-    })
+
+      await Promise.all(promises)
+    }, { isParallelize: true })
   }
 
   /**

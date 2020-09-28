@@ -22,17 +22,19 @@ const mixUserIdToArrData = (
       throw new AuthError()
     }
 
-    const params = Number.isInteger(subUserId)
-      ? { subUserId }
-      : {}
-
-    return data.map((item) => {
-      return {
-        ...item,
-        ...params,
-        user_id: _id
+    for (const obj of data) {
+      if (
+        !obj ||
+        typeof obj !== 'object'
+      ) {
+        continue
       }
-    })
+      if (Number.isInteger(subUserId)) {
+        obj.subUserId = subUserId
+      }
+
+      obj.user_id = _id
+    }
   }
 
   return data
