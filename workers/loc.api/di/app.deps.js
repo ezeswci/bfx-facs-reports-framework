@@ -48,6 +48,7 @@ const RecalcSubAccountLedgersBalancesHook = require(
   '../sync/data.inserter/hooks/recalc.sub.account.ledgers.balances.hook'
 )
 const SqliteDAO = require('../sync/dao/dao.sqlite')
+const BetterSqliteDAO = require('../sync/dao/dao.better.sqlite')
 const {
   PublicСollsСonfAccessors
 } = require('../sync/colls.accessors')
@@ -183,9 +184,14 @@ module.exports = ({
         if (dbDriver === 'sqlite') {
           return rService.ctx.dbSqlite_m0.db
         }
+        if (dbDriver === 'better-sqlite') {
+          return rService.ctx.dbBetterSqlite_m0
+        }
       })
     bind(TYPES.SqliteDAO)
       .to(SqliteDAO)
+    bind(TYPES.BetterSqliteDAO)
+      .to(BetterSqliteDAO)
     bind(TYPES.DAO)
       .toDynamicValue((ctx) => {
         const { dbDriver } = ctx.container.get(
@@ -195,6 +201,11 @@ module.exports = ({
         if (dbDriver === 'sqlite') {
           return ctx.container.get(
             TYPES.SqliteDAO
+          )
+        }
+        if (dbDriver === 'better-sqlite') {
+          return ctx.container.get(
+            TYPES.BetterSqliteDAO
           )
         }
       })

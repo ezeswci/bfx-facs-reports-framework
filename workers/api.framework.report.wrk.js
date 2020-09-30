@@ -16,7 +16,7 @@ const argv = require('yargs')
     type: 'boolean'
   })
   .option('dbDriver', {
-    choices: ['sqlite'],
+    choices: ['sqlite', 'better-sqlite'],
     type: 'string'
   })
   .option('wsPort', {

@@ -17,7 +17,7 @@
   "isAddedUniqueEndingToCsvName": true,
   "isСompress": true,
   "isLoggerDisabled": false,
-  "dbDriver": "sqlite",
+  "dbDriver": "better-sqlite",
   "syncMode": true,
   "secretKey": "secretKey",
   "wsPort": 1455
