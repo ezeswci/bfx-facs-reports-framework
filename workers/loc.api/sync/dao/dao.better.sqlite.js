@@ -9,6 +9,19 @@ const {
 const TYPES = require('../../di/types')
 
 const DAO = require('./dao')
+const {
+  getIndexCreationQuery,
+  getTableCreationQuery,
+  getTriggerCreationQuery
+} = require('./helpers')
+const {
+  TRIGGER_FIELD_NAME,
+  INDEX_FIELD_NAME,
+  UNIQUE_INDEX_FIELD_NAME
+} = require('../schema/const')
+const DB_WORKER_ACTIONS = require(
+  './sqlite-worker/db-worker-actions/db-worker-actions.const'
+)
 
 // TODO:
 class BetterSqliteDAO extends DAO {
@@ -19,7 +32,63 @@ class BetterSqliteDAO extends DAO {
     this.db = this.db.db
   }
 
-  databaseInitialize () {}
+  _createTablesIfNotExists () {
+    const models = this._getModelsMap({
+      omittedFields: [
+        TRIGGER_FIELD_NAME,
+        INDEX_FIELD_NAME,
+        UNIQUE_INDEX_FIELD_NAME
+      ]
+    })
+    const sql = getTableCreationQuery(models, true)
+
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
+      sql
+    })
+  }
+
+  _createTriggerIfNotExists () {
+    const models = this._getModelsMap({ omittedFields: [] })
+    const sql = getTriggerCreationQuery(models, true)
+
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
+      sql
+    })
+  }
+
+  _createIndexisIfNotExists () {
+    const models = this._getModelsMap({ omittedFields: [] })
+    const sql = getIndexCreationQuery(models)
+
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
+      sql
+    })
+  }
+
+  /**
+   * TODO:
+   * @override
+   */
+  beforeMigrationHook () {
+    // return this.enableForeignKeys()
+  }
+
+  /**
+   * TODO:
+   * @override
+   */
+  async databaseInitialize (db) {
+    if (db) this.setDB(db) // TODO:
+    // await super.databaseInitialize(db)
+
+    await this._createTablesIfNotExists()
+    await this._createIndexisIfNotExists()
+    await this._createTriggerIfNotExists()
+    // await this.setCurrDbVer(this.syncSchema.SUPPORTED_DB_VERSION)
+  }
 
   getElemInCollBy () {}
 

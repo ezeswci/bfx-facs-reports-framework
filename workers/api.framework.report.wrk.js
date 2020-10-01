@@ -100,6 +100,10 @@ class WrkReportFrameWorkApi extends WrkReportServiceApi {
     const dbPathAbsolute = path.isAbsolute(argv.dbFolder)
       ? argv.dbFolder
       : path.join(this.ctx.root, argv.dbFolder)
+    const workerPathAbsolute = path.join(
+      this.ctx.root,
+      'workers/loc.api/sync/dao/sqlite-worker/index.js'
+    )
     const conf = this.conf[this.group]
     const facs = []
 
@@ -117,7 +121,12 @@ class WrkReportFrameWorkApi extends WrkReportServiceApi {
           `bfx-facs-db-${conf.dbDriver}`,
           'm0',
           'm0',
-          { name: 'sync', dbPathAbsolute }
+          {
+            name: 'sync',
+            dbPathAbsolute,
+            workerPathAbsolute,
+            verbose: true
+          }
         ]
       )
     }
