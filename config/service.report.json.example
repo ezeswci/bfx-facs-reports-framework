@@ -18,6 +18,7 @@
   "isСompress": true,
   "isLoggerDisabled": false,
   "dbDriver": "better-sqlite",
+  "verboseSql": false,
   "syncMode": true,
   "secretKey": "secretKey",
   "wsPort": 1455

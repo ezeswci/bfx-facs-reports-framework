@@ -19,6 +19,9 @@ const argv = require('yargs')
     choices: ['sqlite', 'better-sqlite'],
     type: 'string'
   })
+  .option('verboseSql', {
+    type: 'boolean'
+  })
   .option('wsPort', {
     type: 'number'
   })
@@ -85,6 +88,7 @@ class WrkReportFrameWorkApi extends WrkReportServiceApi {
       'syncMode',
       'isSchedulerEnabled',
       'dbDriver',
+      'verboseSql',
       'wsPort',
       'secretKey',
       'schedulerRule'
@@ -125,7 +129,7 @@ class WrkReportFrameWorkApi extends WrkReportServiceApi {
             name: 'sync',
             dbPathAbsolute,
             workerPathAbsolute,
-            verbose: true
+            verbose: conf.verboseSql
           }
         ]
       )
