@@ -68,12 +68,33 @@ class BetterSqliteDAO extends DAO {
     })
   }
 
+  enableWALJournalMode () {
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      sql: 'journal_mode = WAL'
+    })
+  }
+
+  enableForeignKeys () {
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      sql: 'foreign_keys = ON'
+    })
+  }
+
+  disableForeignKeys () {
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      sql: 'foreign_keys = OFF'
+    })
+  }
+
   /**
-   * TODO:
    * @override
    */
-  beforeMigrationHook () {
-    // return this.enableForeignKeys()
+  async beforeMigrationHook () {
+    await this.enableForeignKeys()
+    await this.enableWALJournalMode()
   }
 
   /**
@@ -81,8 +102,7 @@ class BetterSqliteDAO extends DAO {
    * @override
    */
   async databaseInitialize (db) {
-    if (db) this.setDB(db) // TODO:
-    // await super.databaseInitialize(db)
+    await super.databaseInitialize(db)
 
     await this._createTablesIfNotExists()
     await this._createIndexisIfNotExists()
