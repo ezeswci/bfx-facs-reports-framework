@@ -5,6 +5,9 @@ const {
   injectable,
   inject
 } = require('inversify')
+const MAIN_DB_WORKER_ACTIONS = require(
+  'bfx-facs-db-better-sqlite/worker/db-worker-actions/db-worker-actions.const'
+)
 
 const TYPES = require('../../di/types')
 
@@ -12,7 +15,8 @@ const DAO = require('./dao')
 const {
   getIndexCreationQuery,
   getTableCreationQuery,
-  getTriggerCreationQuery
+  getTriggerCreationQuery,
+  getTablesNamesQuery
 } = require('./helpers')
 
 const {
@@ -73,6 +77,20 @@ class BetterSqliteDAO extends DAO {
     })
   }
 
+  async getTablesNames () {
+    const sql = getTablesNamesQuery()
+    const data = await this.asyncQuery({
+      action: MAIN_DB_WORKER_ACTIONS.ALL,
+      sql
+    })
+
+    if (!Array.isArray(data)) {
+      return []
+    }
+
+    return data.map(({ name }) => name)
+  }
+
   enableWALJournalMode () {
     return this.asyncQuery({
       action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
@@ -113,6 +131,18 @@ class BetterSqliteDAO extends DAO {
     await this._createIndexisIfNotExists()
     await this._createTriggerIfNotExists()
     await this.setCurrDbVer(this.syncSchema.SUPPORTED_DB_VERSION)
+  }
+
+  /**
+   * @override
+   */
+  async isDBEmpty () {
+    const tablesNames = await this.getTablesNames()
+
+    return (
+      !Array.isArray(tablesNames) ||
+      tablesNames.length === 0
+    )
   }
 
   /**
