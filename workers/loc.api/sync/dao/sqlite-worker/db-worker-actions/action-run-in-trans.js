@@ -8,7 +8,10 @@ const _getData = (params) => {
     params &&
     typeof params === 'object' &&
     params.data &&
-    typeof params.data !== 'undefined'
+    (
+      typeof params.data !== 'undefined' ||
+      typeof params.transVersion !== 'undefined'
+    )
   ) {
     return params.data
   }
