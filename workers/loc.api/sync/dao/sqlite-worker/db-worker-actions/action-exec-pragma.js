@@ -11,5 +11,5 @@ module.exports = (db, sql, params) => {
     res.push(db.pragma(query, { simple }))
   }
 
-  return { result: isSqlArray ? res : res[0] }
+  return isSqlArray ? res : res[0]
 }
