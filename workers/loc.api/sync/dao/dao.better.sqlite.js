@@ -14,6 +14,11 @@ const {
   getTableCreationQuery,
   getTriggerCreationQuery
 } = require('./helpers')
+
+const {
+  DbVersionTypeError
+} = require('../../errors')
+
 const {
   TRIGGER_FIELD_NAME,
   INDEX_FIELD_NAME,
@@ -107,7 +112,31 @@ class BetterSqliteDAO extends DAO {
     await this._createTablesIfNotExists()
     await this._createIndexisIfNotExists()
     await this._createTriggerIfNotExists()
-    // await this.setCurrDbVer(this.syncSchema.SUPPORTED_DB_VERSION)
+    await this.setCurrDbVer(this.syncSchema.SUPPORTED_DB_VERSION)
+  }
+
+  /**
+   * @override
+   */
+  getCurrDbVer () {
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      sql: 'user_version'
+    })
+  }
+
+  /**
+   * @override
+   */
+  setCurrDbVer (version) {
+    if (!Number.isInteger(version)) {
+      throw new DbVersionTypeError()
+    }
+
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      sql: `user_version = ${version}`
+    })
   }
 
   getElemInCollBy () {}
