@@ -20,7 +20,8 @@ const {
 } = require('./helpers')
 
 const {
-  DbVersionTypeError
+  DbVersionTypeError,
+  SqlCorrectnessError
 } = require('../../errors')
 
 const {
@@ -109,6 +110,25 @@ class BetterSqliteDAO extends DAO {
     return this.asyncQuery({
       action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'foreign_keys = OFF'
+    })
+  }
+
+  dropTable (name, isDroppedIfExists) {
+    if (
+      !name ||
+      typeof name !== 'string'
+    ) {
+      throw new SqlCorrectnessError()
+    }
+
+    const condition = isDroppedIfExists
+      ? ' IF EXISTS'
+      : ''
+
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
+      sql: `DROP TABLE${condition} ${name}`,
+      params: { transVersion: 'exclusive' }
     })
   }
 
