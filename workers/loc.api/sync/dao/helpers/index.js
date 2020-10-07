@@ -27,6 +27,7 @@ const getTableCreationQuery = require('./get-table-creation-query')
 const getTriggerCreationQuery = require('./get-trigger-creation-query')
 const getTimeframeFilter = require('./get-timeframe-filter')
 const getTimeframeQuery = require('./get-timeframe-query')
+const getTablesNamesQuery = require('./get-tables-names-query')
 
 module.exports = {
   mixUserIdToArrData,
@@ -51,5 +52,6 @@ module.exports = {
   getTableCreationQuery,
   getTriggerCreationQuery,
   getTimeframeFilter,
-  getTimeframeQuery
+  getTimeframeQuery,
+  getTablesNamesQuery
 }

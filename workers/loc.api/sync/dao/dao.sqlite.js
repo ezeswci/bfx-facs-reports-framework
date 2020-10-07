@@ -35,7 +35,8 @@ const {
   filterModelNameMap,
   getTableCreationQuery,
   getTriggerCreationQuery,
-  isContainedSameMts
+  isContainedSameMts,
+  getTablesNamesQuery
 } = require('./helpers')
 const {
   RemoveListElemsError,
@@ -461,12 +462,8 @@ class SqliteDAO extends DAO {
   }
 
   async getTablesNames () {
-    const data = await this._all(
-      `SELECT name FROM sqlite_master
-        WHERE type='table' AND
-        name NOT LIKE 'sqlite_%'
-        ORDER BY name`
-    )
+    const sql = getTablesNamesQuery()
+    const data = await this._all(sql)
 
     if (!Array.isArray(data)) {
       return []
