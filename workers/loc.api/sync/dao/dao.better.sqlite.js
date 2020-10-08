@@ -195,6 +195,39 @@ class BetterSqliteDAO extends DAO {
   /**
    * @override
    */
+  async insertElemToDb (
+    name,
+    obj = {},
+    opts = {}
+  ) {
+    const {
+      isReplacedIfExists
+    } = { ...opts }
+
+    const keys = Object.keys(obj)
+    const projection = getProjectionQuery(keys)
+    const {
+      placeholders,
+      placeholderVal: params
+    } = getPlaceholdersQuery(obj, keys, { isPrefixed: false })
+    const replace = isReplacedIfExists
+      ? ' OR REPLACE'
+      : ''
+
+    const sql = `INSERT${replace} 
+      INTO ${name}(${projection})
+      VALUES (${placeholders})`
+
+    await this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN,
+      sql,
+      params
+    })
+  }
+
+  /**
+   * @override
+   */
   async insertElemsToDb (
     name,
     auth,
