@@ -13,10 +13,13 @@ const TYPES = require('../../di/types')
 
 const DAO = require('./dao')
 const {
+  mixUserIdToArrData,
   getIndexCreationQuery,
   getTableCreationQuery,
   getTriggerCreationQuery,
-  getTablesNamesQuery
+  getTablesNamesQuery,
+  getProjectionQuery,
+  getPlaceholdersQuery
 } = require('./helpers')
 
 const {
@@ -186,6 +189,60 @@ class BetterSqliteDAO extends DAO {
     return this.asyncQuery({
       action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: `user_version = ${version}`
+    })
+  }
+
+  /**
+   * @override
+   */
+  async insertElemsToDb (
+    name,
+    auth,
+    data = [],
+    opts = {}
+  ) {
+    const {
+      isReplacedIfExists
+    } = { ...opts }
+    const _data = mixUserIdToArrData(
+      auth,
+      data
+    )
+    const sql = []
+    const params = []
+
+    for (const obj of _data) {
+      const keys = Object.keys(obj)
+
+      if (keys.length === 0) {
+        continue
+      }
+
+      const projection = getProjectionQuery(keys)
+      const {
+        placeholders,
+        placeholderVal
+      } = getPlaceholdersQuery(obj, keys, { isPrefixed: false })
+      const replace = isReplacedIfExists
+        ? ' OR REPLACE'
+        : ''
+
+      sql.push(
+        `INSERT${replace}
+          INTO ${name}(${projection})
+          VALUES (${placeholders})`
+      )
+      params.push(placeholderVal)
+    }
+
+    if (sql.length === 0) {
+      return
+    }
+
+    await this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
+      sql,
+      params
     })
   }
 
