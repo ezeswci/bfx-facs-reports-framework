@@ -21,7 +21,10 @@ const {
   getProjectionQuery,
   getPlaceholdersQuery,
   getOrderQuery,
-  getWhereQuery
+  getWhereQuery,
+  getGroupQuery,
+  getSubQuery,
+  getLimitQuery
 } = require('./helpers')
 
 const {
@@ -278,6 +281,56 @@ class BetterSqliteDAO extends DAO {
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
       sql,
       params
+    })
+  }
+
+  /**
+   * @override
+   */
+  getElemsInCollBy (
+    collName,
+    {
+      filter = {},
+      sort = [],
+      subQuery = {
+        sort: []
+      },
+      groupResBy = [],
+      isDistinct = false,
+      projection = [],
+      exclude = [],
+      isExcludePrivate = false,
+      limit = null
+    } = {}
+  ) {
+    const group = getGroupQuery({ groupResBy })
+    const _subQuery = getSubQuery({ name: collName, subQuery })
+    const _sort = getOrderQuery(sort)
+    const {
+      where,
+      values
+    } = getWhereQuery(filter, { isNotPrefixed: true })
+    const _projection = getProjectionQuery(
+      projection,
+      exclude,
+      isExcludePrivate
+    )
+    const distinct = isDistinct ? 'DISTINCT ' : ''
+    const {
+      limit: _limit,
+      limitVal
+    } = getLimitQuery({ limit })
+
+    const sql = `SELECT ${distinct}${_projection} FROM ${_subQuery}
+      ${where}
+      ${group}
+      ${_sort}
+      ${_limit}`
+
+    return this.asyncQuery({
+      action: MAIN_DB_WORKER_ACTIONS.ALL,
+      sql,
+      params: { ...values, ...limitVal }
     })
   }
 
