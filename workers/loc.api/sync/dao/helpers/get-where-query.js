@@ -68,6 +68,7 @@ const _getKeysAndValuesForWhereQuery = (
     : ''
 
   if (!isArr) {
+    // TODO:
     const key = `$${_alias}${origFieldName}`
     const val = serializeVal(filter[origFieldName])
     const subValues = val === null
@@ -79,6 +80,7 @@ const _getKeysAndValuesForWhereQuery = (
 
   const subValues = {}
   const preKey = filter[origFieldName].map((item, j) => {
+    // TODO:
     const subKey = `$${_alias}${origFieldName}_${j}`
     subValues[subKey] = serializeVal(item)
 
@@ -345,10 +347,15 @@ const _getFieldsNamesToDisableCaseSensitivity = (
 
 module.exports = (
   filter = {},
-  isNotSetWhereClause,
-  requestedFilter,
-  alias
+  opts = {}
 ) => {
+  const {
+    isNotPrefixed, // TODO:
+    isNotSetWhereClause,
+    requestedFilter,
+    alias
+  } = { ...opts }
+
   let values = {}
 
   const isOrOp = _isOrOp(filter)

@@ -297,7 +297,13 @@ class SqliteDAO extends DAO {
     const {
       where,
       values: _values
-    } = getWhereQuery(filter, true, null, userTableAlias)
+    } = getWhereQuery(
+      filter,
+      {
+        isNotSetWhereClause: true,
+        alias: userTableAlias
+      }
+    )
     const haveSubUsersQuery = haveSubUsers
       ? 'sa.subUserId IS NOT NULL'
       : ''
@@ -427,7 +433,7 @@ class SqliteDAO extends DAO {
     const {
       where,
       values
-    } = getWhereQuery(masterUser, false, null, tableAlias)
+    } = getWhereQuery(masterUser, { alias: tableAlias })
     const _sort = getOrderQuery(sort)
 
     const sql = `SELECT su.*, ${tableAlias}._id AS masterUserId
@@ -783,7 +789,7 @@ class SqliteDAO extends DAO {
     const {
       where,
       values
-    } = getWhereQuery(filter, false, requestedFilter)
+    } = getWhereQuery(filter, { requestedFilter })
     const group = getGroupQuery(methodColl)
     const subQuery = getSubQuery(methodColl)
     const projection = getProjectionQuery(

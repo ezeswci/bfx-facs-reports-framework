@@ -19,7 +19,9 @@ const {
   getTriggerCreationQuery,
   getTablesNamesQuery,
   getProjectionQuery,
-  getPlaceholdersQuery
+  getPlaceholdersQuery,
+  getOrderQuery,
+  getWhereQuery
 } = require('./helpers')
 
 const {
@@ -209,7 +211,7 @@ class BetterSqliteDAO extends DAO {
     const {
       placeholders,
       placeholderVal: params
-    } = getPlaceholdersQuery(obj, keys, { isPrefixed: false })
+    } = getPlaceholdersQuery(obj, keys, { isNotPrefixed: true })
     const replace = isReplacedIfExists
       ? ' OR REPLACE'
       : ''
@@ -255,7 +257,7 @@ class BetterSqliteDAO extends DAO {
       const {
         placeholders,
         placeholderVal
-      } = getPlaceholdersQuery(obj, keys, { isPrefixed: false })
+      } = getPlaceholdersQuery(obj, keys, { isNotPrefixed: true })
       const replace = isReplacedIfExists
         ? ' OR REPLACE'
         : ''
@@ -279,7 +281,30 @@ class BetterSqliteDAO extends DAO {
     })
   }
 
-  getElemInCollBy () {}
+  /**
+   * @override
+   */
+  getElemInCollBy (
+    name,
+    filter = {},
+    sort = []
+  ) {
+    const _sort = getOrderQuery(sort)
+    const {
+      where,
+      values: params
+    } = getWhereQuery(filter, { isNotPrefixed: true })
+
+    const sql = `SELECT * FROM ${name}
+      ${where}
+      ${_sort}`
+
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.GET,
+      sql,
+      params
+    })
+  }
 
   updateRecordOf () {}
 

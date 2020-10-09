@@ -3,8 +3,8 @@
 const { serializeVal } = require('./serialization')
 
 module.exports = (obj, keys, opts) => {
-  const { isPrefixed = true } = { ...opts }
-  const prefix = isPrefixed ? '$' : ''
+  const { isNotPrefixed = false } = { ...opts }
+  const prefix = isNotPrefixed ? '' : '$'
   const _keys = Array.isArray(keys)
     ? keys
     : Object.keys(obj)
