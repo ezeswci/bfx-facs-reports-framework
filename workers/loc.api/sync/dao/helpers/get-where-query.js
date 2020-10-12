@@ -57,34 +57,48 @@ const _getCompareOperator = (
     : SQL_OPERATORS.EQ
 }
 
+const _getKeyAndQueryValKey = (name, isNotPrefixed) => {
+  const key = `$${name}`
+  const queryValKey = isNotPrefixed ? name : key
+
+  return { key, queryValKey }
+}
+
 const _getKeysAndValuesForWhereQuery = (
   filter,
   origFieldName,
   isArr,
-  alias
+  alias,
+  isNotPrefixed
 ) => {
   const _alias = alias && typeof alias === 'string'
     ? `${alias}_`
     : ''
 
   if (!isArr) {
-    // TODO:
-    const key = `$${_alias}${origFieldName}`
+    const name = `$${_alias}${origFieldName}`
+    const {
+      key,
+      queryValKey
+    } = _getKeyAndQueryValKey(name, isNotPrefixed)
     const val = serializeVal(filter[origFieldName])
     const subValues = val === null
       ? {}
-      : { [key]: val }
+      : { [queryValKey]: val }
 
     return { key, subValues }
   }
 
   const subValues = {}
   const preKey = filter[origFieldName].map((item, j) => {
-    // TODO:
-    const subKey = `$${_alias}${origFieldName}_${j}`
-    subValues[subKey] = serializeVal(item)
+    const name = `$${_alias}${origFieldName}_${j}`
+    const {
+      key,
+      queryValKey
+    } = _getKeyAndQueryValKey(name, isNotPrefixed)
+    subValues[queryValKey] = serializeVal(item)
 
-    return subKey
+    return key
   }).join(', ')
 
   const key = `(${preKey})`
@@ -164,11 +178,16 @@ const _getCompareOpAndKey = (
   subValues,
   fieldName,
   origFieldName,
-  fieldsNamesToDisableCaseSensitivity
+  fieldsNamesToDisableCaseSensitivity,
+  isNotPrefixed
 ) => {
+  const queryValKey = isNotPrefixed
+    ? key.replace(/^[$]/, '')
+    : key
+
   if (
     compareOperator === SQL_OPERATORS.EQ &&
-    subValues[key] === null
+    subValues[queryValKey] === null
   ) {
     return {
       compareOperator: SQL_OPERATORS.IS_NULL,
@@ -177,7 +196,7 @@ const _getCompareOpAndKey = (
   }
   if (
     compareOperator === SQL_OPERATORS.NE &&
-    subValues[key] === null
+    subValues[queryValKey] === null
   ) {
     return {
       compareOperator: SQL_OPERATORS.IS_NOT_NULL,
@@ -225,6 +244,7 @@ const _getWhereQueryAndValues = (
   isArr = false,
   fieldsNamesToDisableCaseSensitivity,
   alias,
+  isNotPrefixed,
   condName = ''
 ) => {
   const _alias = alias && typeof alias === 'string'
@@ -260,7 +280,8 @@ const _getWhereQueryAndValues = (
     _filter,
     _fieldNameWithCondName,
     isArr,
-    alias
+    alias,
+    isNotPrefixed
   )
   const {
     compareOperator,
@@ -271,7 +292,8 @@ const _getWhereQueryAndValues = (
     subValues,
     _fieldName,
     origFieldName,
-    fieldsNamesToDisableCaseSensitivity
+    fieldsNamesToDisableCaseSensitivity,
+    isNotPrefixed
   )
 
   return {
@@ -350,7 +372,7 @@ module.exports = (
   opts = {}
 ) => {
   const {
-    isNotPrefixed, // TODO:
+    isNotPrefixed,
     isNotSetWhereClause,
     requestedFilter,
     alias
@@ -417,6 +439,7 @@ module.exports = (
               isCondArr,
               fieldsNamesToDisableCaseSensitivity,
               alias,
+              isNotPrefixed,
               currCond
             )
 
@@ -438,7 +461,8 @@ module.exports = (
         accum,
         isArr,
         fieldsNamesToDisableCaseSensitivity,
-        alias
+        alias,
+        isNotPrefixed
       )
 
       values = { ...values, ...subValues }
