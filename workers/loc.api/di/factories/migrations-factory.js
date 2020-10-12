@@ -8,9 +8,12 @@ const {
 } = require('../../errors')
 
 module.exports = (ctx) => {
-  const { dbDriver } = ctx.container.get(
+  const { dbDriver: _dbDriver } = ctx.container.get(
     TYPES.CONF
   )
+  const dbDriver = /sqlite/gi.test(_dbDriver)
+    ? 'sqlite'
+    : _dbDriver
   const logger = ctx.container.get(
     TYPES.Logger
   )

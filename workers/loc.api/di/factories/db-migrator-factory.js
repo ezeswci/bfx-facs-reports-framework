@@ -12,7 +12,7 @@ module.exports = (ctx) => {
       TYPES.DAO
     )
 
-    if (dbDriver === 'sqlite') {
+    if (/sqlite/gi.test(dbDriver)) {
       const sqliteDbMigrator = ctx.container.get(
         TYPES.SqliteDbMigrator
       )

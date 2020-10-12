@@ -86,7 +86,7 @@ class BetterSqliteDAO extends DAO {
     })
   }
 
-  async getTablesNames () {
+  async _getTablesNames () {
     const sql = getTablesNamesQuery()
     const data = await this.asyncQuery({
       action: MAIN_DB_WORKER_ACTIONS.ALL,
@@ -121,21 +121,15 @@ class BetterSqliteDAO extends DAO {
     })
   }
 
-  dropTable (name, isDroppedIfExists) {
-    if (
-      !name ||
-      typeof name !== 'string'
-    ) {
-      throw new SqlCorrectnessError()
-    }
-
-    const condition = isDroppedIfExists
-      ? ' IF EXISTS'
-      : ''
+  async dropAllTables () {
+    const tableNames = await this._getTablesNames()
+    const sql = tableNames.map((name) => (
+      `DROP TABLE IF EXISTS ${name}`
+    ))
 
     return this.asyncQuery({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
-      sql: `DROP TABLE${condition} ${name}`,
+      sql,
       params: { transVersion: 'exclusive' }
     })
   }
@@ -149,7 +143,6 @@ class BetterSqliteDAO extends DAO {
   }
 
   /**
-   * TODO:
    * @override
    */
   async databaseInitialize (db) {
@@ -165,11 +158,11 @@ class BetterSqliteDAO extends DAO {
    * @override
    */
   async isDBEmpty () {
-    const tablesNames = await this.getTablesNames()
+    const tableNames = await this._getTablesNames()
 
     return (
-      !Array.isArray(tablesNames) ||
-      tablesNames.length === 0
+      !Array.isArray(tableNames) ||
+      tableNames.length === 0
     )
   }
 
@@ -195,6 +188,81 @@ class BetterSqliteDAO extends DAO {
       action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: `user_version = ${version}`
     })
+  }
+
+  /**
+   * @override
+   */
+  async executeQueriesInTrans (
+    sql,
+    opts = {}
+  ) {
+    const {
+      beforeTransFn,
+      afterTransFn
+    } = { ...opts }
+    const isArray = Array.isArray(sql)
+    const _sqlArr = isArray
+      ? sql
+      : [sql]
+
+    if (_sqlArr.length === 0) {
+      return
+    }
+
+    const {
+      query,
+      params
+    } = _sqlArr.reduce((accum, curr) => {
+      if (
+        curr &&
+        typeof curr === 'string'
+      ) {
+        accum.query.push(curr)
+        accum.params.push()
+
+        return accum
+      }
+      if (
+        curr &&
+        typeof curr === 'object'
+      ) {
+        const { sql, values } = curr
+
+        accum.query.push(sql)
+        accum.params.push(values)
+
+        return accum
+      }
+
+      throw new SqlCorrectnessError()
+    }, { query: [], params: [] })
+
+    let res
+
+    try {
+      if (typeof beforeTransFn === 'function') {
+        await beforeTransFn()
+      }
+
+      res = await this.asyncQuery({
+        action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
+        sql: isArray ? query : query[0],
+        params: isArray ? params : params[0]
+      })
+
+      if (typeof afterTransFn === 'function') {
+        await afterTransFn()
+      }
+    } catch (err) {
+      if (typeof afterTransFn === 'function') {
+        await afterTransFn()
+      }
+
+      throw err
+    }
+
+    return res
   }
 
   /**

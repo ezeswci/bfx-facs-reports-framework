@@ -53,9 +53,8 @@ class DAO {
 
     await this.beforeMigrationHook()
 
-    // TODO:
-    // const dbMigrator = this.dbMigratorFactory()
-    // await dbMigrator.migrateFromCurrToSupportedVer()
+    const dbMigrator = this.dbMigratorFactory()
+    await dbMigrator.migrateFromCurrToSupportedVer()
   }
 
   /**

@@ -467,7 +467,7 @@ class SqliteDAO extends DAO {
     })
   }
 
-  async getTablesNames () {
+  async _getTablesNames () {
     const sql = getTablesNamesQuery()
     const data = await this._all(sql)
 
@@ -486,19 +486,17 @@ class SqliteDAO extends DAO {
     return this._run('PRAGMA foreign_keys = OFF')
   }
 
-  dropTable (name, isDroppedIfExists) {
-    if (
-      !name ||
-      typeof name !== 'string'
-    ) {
-      throw new SqlCorrectnessError()
-    }
+  async dropAllTables () {
+    const tableNames = await this._getTablesNames()
+    const sqlArr = tableNames.map((name) => (
+      `DROP TABLE IF EXISTS ${name}`
+    ))
 
-    const condition = isDroppedIfExists
-      ? ' IF EXISTS'
-      : ''
+    await this._beginTrans(async () => {
+      const promises = sqlArr.map((sql) => this._run(sql))
 
-    return this._run(`DROP TABLE${condition} ${name}`)
+      await Promise.all(promises)
+    }, { isParallelize: true })
   }
 
   /**
@@ -526,11 +524,11 @@ class SqliteDAO extends DAO {
    * @override
    */
   async isDBEmpty () {
-    const tablesNames = await this.getTablesNames()
+    const tableNames = await this._getTablesNames()
 
     return (
-      !Array.isArray(tablesNames) ||
-      tablesNames.length === 0
+      !Array.isArray(tableNames) ||
+      tableNames.length === 0
     )
   }
 
