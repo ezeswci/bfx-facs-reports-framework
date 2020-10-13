@@ -650,9 +650,34 @@ class BetterSqliteDAO extends DAO {
     })
   }
 
-  updateRecordOf () {}
+  /**
+   * @override
+   */
+  async updateCollBy (name,
+    filter = {},
+    data = {}
+  ) {
+    const {
+      where,
+      values: params
+    } = getWhereQuery(filter, { isNotPrefixed: true })
+    const fields = Object.keys(data).map((item) => {
+      const key = `new_${item}`
+      params[key] = data[item]
 
-  updateCollBy () {}
+      return `${item} = $${key}`
+    }).join(', ')
+
+    const sql = `UPDATE ${name} SET ${fields} ${where}`
+
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN,
+      sql,
+      params
+    })
+  }
+
+  updateRecordOf () {}
 }
 
 decorate(injectable(), BetterSqliteDAO)
