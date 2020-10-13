@@ -14,6 +14,7 @@ const TYPES = require('../../di/types')
 const DAO = require('./dao')
 const {
   mixUserIdToArrData,
+  serializeObj,
   getIndexCreationQuery,
   getTableCreationQuery,
   getTriggerCreationQuery,
@@ -339,6 +340,57 @@ class BetterSqliteDAO extends DAO {
           VALUES (${placeholders})`
       )
       params.push(placeholderVal)
+    }
+
+    if (sql.length === 0) {
+      return
+    }
+
+    await this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
+      sql,
+      params
+    })
+  }
+
+  /**
+   * @override
+   */
+  async insertElemsToDbIfNotExists (
+    name,
+    auth,
+    data = []
+  ) {
+    const _data = mixUserIdToArrData(
+      auth,
+      data
+    )
+    const sql = []
+    const params = []
+
+    for (const obj of _data) {
+      const keys = Object.keys(obj)
+
+      if (keys.length === 0) {
+        continue
+      }
+
+      const _obj = serializeObj(obj, keys)
+      const projection = getProjectionQuery(keys)
+      const {
+        where,
+        values
+      } = getWhereQuery(_obj)
+      const {
+        placeholders,
+        placeholderVal
+      } = getPlaceholdersQuery(_obj, keys, { isNotPrefixed: true })
+
+      sql.push(
+        `INSERT INTO ${name}(${projection}) SELECT ${placeholders}
+          WHERE NOT EXISTS(SELECT 1 FROM ${name} ${where})`
+      )
+      params.push({ ...values, ...placeholderVal })
     }
 
     if (sql.length === 0) {

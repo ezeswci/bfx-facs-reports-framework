@@ -29,7 +29,7 @@ const {
   getStatusMessagesFilter,
   getProjectionQuery,
   getPlaceholdersQuery,
-  serializeVal,
+  serializeObj,
   getGroupQuery,
   getSubQuery,
   filterModelNameMap,
@@ -691,10 +691,7 @@ class SqliteDAO extends DAO {
           continue
         }
 
-        const _obj = keys.reduce((accum, key) => ({
-          ...accum,
-          [key]: serializeVal(obj[key])
-        }), {})
+        const _obj = serializeObj(obj, keys)
         const projection = getProjectionQuery(keys)
         const {
           where,
@@ -1080,13 +1077,7 @@ class SqliteDAO extends DAO {
   async updateRecordOf (name, data) {
     await this._beginTrans(async () => {
       const elems = await this.getElemsInCollBy(name)
-      const record = Object.entries(data)
-        .reduce((accum, [key, val]) => {
-          return {
-            ...accum,
-            [key]: serializeVal(val)
-          }
-        }, {})
+      const record = serializeObj(data)
 
       if (!Array.isArray(elems)) {
         throw new UpdateRecordError()
