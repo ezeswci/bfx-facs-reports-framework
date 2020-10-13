@@ -8,6 +8,9 @@ const {
 const MAIN_DB_WORKER_ACTIONS = require(
   'bfx-facs-db-better-sqlite/worker/db-worker-actions/db-worker-actions.const'
 )
+const {
+  AuthError
+} = require('bfx-report/workers/loc.api/errors')
 
 const TYPES = require('../../di/types')
 
@@ -15,6 +18,15 @@ const DAO = require('./dao')
 const {
   mixUserIdToArrData,
   serializeObj,
+  filterModelNameMap,
+  normalizeFilterParams,
+  checkFilterParams,
+  getLimitNotMoreThan,
+  convertDataType,
+  getInsertableArrayObjectsFilter,
+  getStatusMessagesFilter,
+  isContainedSameMts,
+
   getIndexCreationQuery,
   getTableCreationQuery,
   getTriggerCreationQuery,
@@ -402,6 +414,165 @@ class BetterSqliteDAO extends DAO {
       sql,
       params
     })
+  }
+
+  /**
+   * @override
+   */
+  async findInCollBy (
+    method,
+    reqArgs,
+    {
+      isPrepareResponse = false,
+      isPublic = false,
+      additionalModel,
+      schema = {},
+      isExcludePrivate = true,
+      isNotConsideredSameMts
+    } = {}
+  ) {
+    const filterModelName = filterModelNameMap.get(method)
+
+    const args = normalizeFilterParams(method, reqArgs)
+    checkFilterParams(filterModelName, args)
+
+    const { auth: user } = { ...args }
+    const methodColl = {
+      ...this._getMethodCollMap().get(method),
+      ...schema
+    }
+    const params = { ...args.params }
+    const { filter: requestedFilter } = params
+    const {
+      maxLimit,
+      dateFieldName,
+      symbolFieldName,
+      sort: _sort,
+      model,
+      dataStructureConverter,
+      name
+    } = { ...methodColl }
+    params.limit = maxLimit
+      ? getLimitNotMoreThan(params.limit, maxLimit)
+      : null
+    const _model = { ...model, ...additionalModel }
+
+    const exclude = ['_id']
+    const statusMessagesfilter = getStatusMessagesFilter(
+      methodColl,
+      params
+    )
+    const insertableArrayObjectsFilter = getInsertableArrayObjectsFilter(
+      methodColl,
+      params
+    )
+    const filter = {
+      ...insertableArrayObjectsFilter,
+      ...statusMessagesfilter
+    }
+
+    if (!isPublic) {
+      const { _id } = { ...user }
+
+      if (!Number.isInteger(_id)) {
+        throw new AuthError()
+      }
+
+      exclude.push('user_id')
+      filter.user_id = user._id
+    }
+
+    const {
+      limit,
+      limitVal
+    } = getLimitQuery({ ...params, isNotPrefixed: true })
+    const sort = getOrderQuery(_sort)
+    const {
+      where,
+      values
+    } = getWhereQuery(
+      filter,
+      { requestedFilter, isNotPrefixed: true }
+    )
+    const group = getGroupQuery(methodColl)
+    const subQuery = getSubQuery(methodColl)
+    const projection = getProjectionQuery(
+      _model,
+      exclude,
+      isExcludePrivate
+    )
+
+    const sql = `SELECT ${projection} FROM ${subQuery}
+      ${where}
+      ${group}
+      ${sort}
+      ${limit}`
+
+    const _res = await this.asyncQuery({
+      action: MAIN_DB_WORKER_ACTIONS.ALL,
+      sql,
+      params: { ...values, ...limitVal }
+    })
+
+    const convertedDataStructure = (
+      typeof dataStructureConverter === 'function'
+    )
+      ? _res.reduce(methodColl.dataStructureConverter, [])
+      : _res
+    const res = convertDataType(convertedDataStructure)
+
+    if (isPrepareResponse) {
+      const _isContainedSameMts = isContainedSameMts(
+        res,
+        dateFieldName,
+        params.limit
+      )
+
+      if (
+        isNotConsideredSameMts ||
+        !_isContainedSameMts
+      ) {
+        const symbols = (
+          params.symbol &&
+          Array.isArray(params.symbol) &&
+          params.symbol.length > 1
+        ) ? params.symbol : []
+
+        return this.prepareResponse(
+          res,
+          dateFieldName,
+          params.limit,
+          params.notThrowError,
+          params.notCheckNextPage,
+          symbols,
+          symbolFieldName,
+          name
+        )
+      }
+
+      const _args = {
+        ...args,
+        params: {
+          ...args.params,
+          limit: maxLimit
+        }
+      }
+
+      return this.findInCollBy(
+        method,
+        _args,
+        {
+          isPrepareResponse,
+          isPublic,
+          additionalModel,
+          schema,
+          isExcludePrivate,
+          isNotConsideredSameMts: true
+        }
+      )
+    }
+
+    return res
   }
 
   /**
