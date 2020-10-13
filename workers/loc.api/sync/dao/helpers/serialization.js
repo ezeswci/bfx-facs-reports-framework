@@ -18,6 +18,17 @@ const serializeVal = (val) => {
   return val
 }
 
+const serializeObj = (obj, keys) => {
+  const _keys = Array.isArray(keys)
+    ? keys
+    : Object.keys(obj)
+
+  return _keys.reduce((accum, key) => ({
+    ...accum,
+    [key]: serializeVal(obj[key])
+  }), {})
+}
+
 const deserializeVal = (
   val,
   key,
@@ -55,5 +66,6 @@ const deserializeVal = (
 
 module.exports = {
   serializeVal,
+  serializeObj,
   deserializeVal
 }

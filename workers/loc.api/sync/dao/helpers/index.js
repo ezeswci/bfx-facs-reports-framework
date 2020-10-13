@@ -8,6 +8,7 @@ const {
 } = require('./utils')
 const {
   serializeVal,
+  serializeObj,
   deserializeVal
 } = require('./serialization')
 const getWhereQuery = require('./get-where-query')
@@ -35,6 +36,7 @@ module.exports = {
   mapObjBySchema,
   isContainedSameMts,
   serializeVal,
+  serializeObj,
   deserializeVal,
   getWhereQuery,
   getLimitQuery,
