@@ -43,7 +43,8 @@ const {
 
 const {
   DbVersionTypeError,
-  SqlCorrectnessError
+  SqlCorrectnessError,
+  RemoveListElemsError
 } = require('../../errors')
 
 const {
@@ -748,6 +749,40 @@ class BetterSqliteDAO extends DAO {
       where,
       values: params
     } = getWhereQuery(data, { isNotPrefixed: true })
+
+    const sql = `DELETE FROM ${name} ${where}`
+
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN,
+      sql,
+      params
+    })
+  }
+
+  /**
+   * @override
+   */
+  async removeElemsFromDbIfNotInLists (name, lists) {
+    const areAllListsNotArr = Object.keys(lists)
+      .every(key => !Array.isArray(lists[key]))
+
+    if (areAllListsNotArr) {
+      throw new RemoveListElemsError()
+    }
+
+    const $or = Object.entries(lists)
+      .reduce((accum, [key, val]) => {
+        return {
+          $not: {
+            ...accum.$not,
+            [key]: val
+          }
+        }
+      }, { $not: {} })
+    const {
+      where,
+      values: params
+    } = getWhereQuery({ $or }, { isNotPrefixed: true })
 
     const sql = `DELETE FROM ${name} ${where}`
 
