@@ -44,7 +44,8 @@ const {
 const {
   DbVersionTypeError,
   SqlCorrectnessError,
-  RemoveListElemsError
+  RemoveListElemsError,
+  UpdateRecordError
 } = require('../../errors')
 
 const {
@@ -722,10 +723,21 @@ class BetterSqliteDAO extends DAO {
   }
 
   /**
-   * TODO:
    * @override
    */
-  updateRecordOf () {}
+  async updateRecordOf (name, record) {
+    const data = serializeObj(record)
+
+    const res = await this.asyncQuery({
+      action: DB_WORKER_ACTIONS.UPDATE_RECORD_OF,
+      params: { data, name }
+    })
+    const { changes } = { ...res }
+
+    if (changes < 1) {
+      throw new UpdateRecordError()
+    }
+  }
 
   /**
    * @override
