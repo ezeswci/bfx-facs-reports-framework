@@ -26,6 +26,7 @@ const {
   getInsertableArrayObjectsFilter,
   getStatusMessagesFilter,
   isContainedSameMts,
+  mapObjBySchema,
 
   getIndexCreationQuery,
   getTableCreationQuery,
@@ -653,7 +654,8 @@ class BetterSqliteDAO extends DAO {
   /**
    * @override
    */
-  async updateCollBy (name,
+  async updateCollBy (
+    name,
     filter = {},
     data = {}
   ) {
@@ -672,6 +674,47 @@ class BetterSqliteDAO extends DAO {
 
     return this.asyncQuery({
       action: DB_WORKER_ACTIONS.RUN,
+      sql,
+      params
+    })
+  }
+
+  /**
+   * @override
+   */
+  async updateElemsInCollBy (
+    name,
+    data = [],
+    filterPropNames = {},
+    upPropNames = {}
+  ) {
+    const sql = []
+    const params = []
+
+    for (const obj of data) {
+      const filter = mapObjBySchema(obj, filterPropNames)
+      const newItem = mapObjBySchema(obj, upPropNames)
+      const {
+        where,
+        values
+      } = getWhereQuery(filter, { isNotPrefixed: true })
+      const fields = Object.keys(newItem).map((item) => {
+        const key = `new_${item}`
+        params[key] = newItem[item]
+
+        return `${item} = $${key}`
+      }).join(', ')
+
+      sql.push(`UPDATE ${name} SET ${fields} ${where}`)
+      params.push(values)
+    }
+
+    if (sql.length === 0) {
+      return
+    }
+
+    await this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
       sql,
       params
     })
