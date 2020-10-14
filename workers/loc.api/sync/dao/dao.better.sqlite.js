@@ -720,7 +720,43 @@ class BetterSqliteDAO extends DAO {
     })
   }
 
+  /**
+   * TODO:
+   * @override
+   */
   updateRecordOf () {}
+
+  /**
+   * @override
+   */
+  async removeElemsFromDb (
+    name,
+    auth,
+    data = {}
+  ) {
+    if (auth) {
+      const { _id } = { ...auth }
+
+      if (!Number.isInteger(_id)) {
+        throw new AuthError()
+      }
+
+      data.user_id = _id
+    }
+
+    const {
+      where,
+      values: params
+    } = getWhereQuery(data, { isNotPrefixed: true })
+
+    const sql = `DELETE FROM ${name} ${where}`
+
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.RUN,
+      sql,
+      params
+    })
+  }
 }
 
 decorate(injectable(), BetterSqliteDAO)
