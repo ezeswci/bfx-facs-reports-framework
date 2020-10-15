@@ -1,9 +1,11 @@
 'use strict'
 
-const {
-  getProjectionQuery,
-  getPlaceholdersQuery
-} = require('../../helpers')
+const getProjectionQuery = require(
+  '../../helpers/get-projection-query'
+)
+const getPlaceholdersQuery = require(
+  '../../helpers/get-placeholders-query'
+)
 
 const _runStm = (stm, param) => {
   return typeof param === 'undefined'

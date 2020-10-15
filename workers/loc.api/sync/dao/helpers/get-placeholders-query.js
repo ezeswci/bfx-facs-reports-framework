@@ -1,6 +1,6 @@
 'use strict'
 
-const { serializeVal } = require('./serialization')
+const serializeVal = require('./serialization/serialize-val')
 
 module.exports = (obj, keys, opts) => {
   const { isNotPrefixed = false } = { ...opts }
