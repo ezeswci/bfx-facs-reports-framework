@@ -63,6 +63,8 @@ class BetterSqliteDAO extends DAO {
     super(...args)
 
     this.asyncQuery = this.db.asyncQuery.bind(this.db)
+    this._initializeWalCheckpointRestart = this.db
+      .initializeWalCheckpointRestart.bind(this.db)
     this.db = this.db.db
   }
 
@@ -119,11 +121,17 @@ class BetterSqliteDAO extends DAO {
     return data.map(({ name }) => name)
   }
 
-  enableWALJournalMode () {
-    return this.asyncQuery({
+  async _enableWALJournalMode () {
+    await this.asyncQuery({
+      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      sql: 'synchronous = NORMAL'
+    })
+    await this.asyncQuery({
       action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'journal_mode = WAL'
     })
+
+    this._initializeWalCheckpointRestart()
   }
 
   enableForeignKeys () {
@@ -158,7 +166,7 @@ class BetterSqliteDAO extends DAO {
    */
   async beforeMigrationHook () {
     await this.enableForeignKeys()
-    await this.enableWALJournalMode()
+    await this._enableWALJournalMode()
   }
 
   /**
