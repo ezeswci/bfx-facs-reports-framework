@@ -10,6 +10,7 @@ const actionRun = require('./action-run')
 const actionGet = require('./action-get')
 const actionRunInTrans = require('./action-run-in-trans')
 const actionExecPragma = require('./action-exec-pragma')
+const actionUpdateRecordOf = require('./action-update-record-of')
 
 module.exports = (db, args) => {
   const { action, sql, params } = args
@@ -25,6 +26,9 @@ module.exports = (db, args) => {
   }
   if (action === DB_WORKER_ACTIONS.EXEC_PRAGMA) {
     return actionExecPragma(db, sql, params)
+  }
+  if (action === DB_WORKER_ACTIONS.UPDATE_RECORD_OF) {
+    return actionUpdateRecordOf(db, sql, params)
   }
 
   return dbWorkerActions(db, args)
