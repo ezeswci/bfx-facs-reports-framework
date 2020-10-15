@@ -78,7 +78,8 @@ class BetterSqliteDAO extends DAO {
 
     return this.asyncQuery({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
-      sql
+      sql,
+      params: { transVersion: 'exclusive' }
     })
   }
 
@@ -88,7 +89,8 @@ class BetterSqliteDAO extends DAO {
 
     return this.asyncQuery({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
-      sql
+      sql,
+      params: { transVersion: 'exclusive' }
     })
   }
 
@@ -98,7 +100,8 @@ class BetterSqliteDAO extends DAO {
 
     return this.asyncQuery({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
-      sql
+      sql,
+      params: { transVersion: 'exclusive' }
     })
   }
 
