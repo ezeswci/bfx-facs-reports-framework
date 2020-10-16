@@ -658,7 +658,7 @@ class BetterSqliteDAO extends DAO {
       ${_sort}`
 
     return this.asyncQuery({
-      action: DB_WORKER_ACTIONS.GET,
+      action: MAIN_DB_WORKER_ACTIONS.GET,
       sql,
       params
     })
