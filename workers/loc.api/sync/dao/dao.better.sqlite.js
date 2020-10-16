@@ -319,7 +319,7 @@ class BetterSqliteDAO extends DAO {
       VALUES (${placeholders})`
 
     await this.asyncQuery({
-      action: DB_WORKER_ACTIONS.RUN,
+      action: MAIN_DB_WORKER_ACTIONS.RUN,
       sql,
       params
     })
@@ -686,7 +686,7 @@ class BetterSqliteDAO extends DAO {
     const sql = `UPDATE ${name} SET ${fields} ${where}`
 
     return this.asyncQuery({
-      action: DB_WORKER_ACTIONS.RUN,
+      action: MAIN_DB_WORKER_ACTIONS.RUN,
       sql,
       params
     })
@@ -776,7 +776,7 @@ class BetterSqliteDAO extends DAO {
     const sql = `DELETE FROM ${name} ${where}`
 
     return this.asyncQuery({
-      action: DB_WORKER_ACTIONS.RUN,
+      action: MAIN_DB_WORKER_ACTIONS.RUN,
       sql,
       params
     })
