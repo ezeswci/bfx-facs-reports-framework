@@ -123,11 +123,11 @@ class BetterSqliteDAO extends DAO {
 
   async _enableWALJournalMode () {
     await this.asyncQuery({
-      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'synchronous = NORMAL'
     })
     await this.asyncQuery({
-      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'journal_mode = WAL'
     })
 
@@ -136,14 +136,14 @@ class BetterSqliteDAO extends DAO {
 
   enableForeignKeys () {
     return this.asyncQuery({
-      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'foreign_keys = ON'
     })
   }
 
   disableForeignKeys () {
     return this.asyncQuery({
-      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'foreign_keys = OFF'
     })
   }
@@ -198,7 +198,7 @@ class BetterSqliteDAO extends DAO {
    */
   getCurrDbVer () {
     return this.asyncQuery({
-      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'user_version'
     })
   }
@@ -212,7 +212,7 @@ class BetterSqliteDAO extends DAO {
     }
 
     return this.asyncQuery({
-      action: DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: `user_version = ${version}`
     })
   }

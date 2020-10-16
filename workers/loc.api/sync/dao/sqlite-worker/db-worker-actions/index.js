@@ -24,9 +24,6 @@ module.exports = (db, args) => {
   if (action === DB_WORKER_ACTIONS.RUN_IN_TRANS) {
     return actionRunInTrans(db, sql, params)
   }
-  if (action === DB_WORKER_ACTIONS.EXEC_PRAGMA) {
-    return actionExecPragma(db, sql, params)
-  }
   if (action === DB_WORKER_ACTIONS.UPDATE_RECORD_OF) {
     return actionUpdateRecordOf(db, sql, params)
   }
