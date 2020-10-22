@@ -19,6 +19,9 @@ const argv = require('yargs')
     choices: ['sqlite', 'better-sqlite'],
     type: 'string'
   })
+  .option('isSqliteStoredInMemory', {
+    type: 'boolean'
+  })
   .option('verboseSql', {
     type: 'boolean'
   })
@@ -91,7 +94,8 @@ class WrkReportFrameWorkApi extends WrkReportServiceApi {
       'verboseSql',
       'wsPort',
       'secretKey',
-      'schedulerRule'
+      'schedulerRule',
+      'isSqliteStoredInMemory'
     ]
   ) {
     super.setArgsOfCommandLineToConf()
@@ -108,10 +112,15 @@ class WrkReportFrameWorkApi extends WrkReportServiceApi {
       this.ctx.root,
       'workers/loc.api/sync/dao/sqlite-worker/index.js'
     )
-    const conf = this.conf[this.group]
+    const {
+      syncMode,
+      dbDriver,
+      verboseSql,
+      isSqliteStoredInMemory
+    } = this.conf[this.group]
     const facs = []
 
-    if (conf.syncMode) {
+    if (syncMode) {
       facs.push(
         [
           'fac',
@@ -122,14 +131,15 @@ class WrkReportFrameWorkApi extends WrkReportServiceApi {
         ],
         [
           'fac',
-          `bfx-facs-db-${conf.dbDriver}`,
+          `bfx-facs-db-${dbDriver}`,
           'm0',
           'm0',
           {
             name: 'sync',
             dbPathAbsolute,
             workerPathAbsolute,
-            verbose: conf.verboseSql
+            verbose: verboseSql,
+            isSqliteStoredInMemory
           }
         ]
       )
