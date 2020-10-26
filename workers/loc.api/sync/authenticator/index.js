@@ -19,7 +19,8 @@ const {
 } = require('../../errors')
 const {
   generateSubUserName,
-  pickProps
+  pickProps,
+  pickSessionProps
 } = require('./helpers')
 
 class Authenticator {
@@ -775,7 +776,7 @@ class Authenticator {
   getUserSessionByToken (token, isReturnedPassword) {
     const session = this.userSessions.get(token)
 
-    return this.pickSessionProps(session, isReturnedPassword)
+    return pickSessionProps(session, isReturnedPassword)
   }
 
   getUserSessionByEmail (args, isReturnedPassword) {
@@ -791,14 +792,14 @@ class Authenticator {
     })
     const session = Array.isArray(keyVal) ? keyVal[1] : {}
 
-    return this.pickSessionProps(session, isReturnedPassword)
+    return pickSessionProps(session, isReturnedPassword)
   }
 
   getUserSessions () {
     const sessionsMap = [...this.userSessions]
       .map(([token, session]) => [
         token,
-        this.pickSessionProps(session)
+        pickSessionProps(session)
       ])
 
     return new Map(sessionsMap)
@@ -835,33 +836,6 @@ class Authenticator {
     })
 
     return isArray ? res : res[0]
-  }
-
-  pickSessionProps (session, isReturnedPassword) {
-    const passwordProp = isReturnedPassword
-      ? ['password']
-      : []
-    const allowedProps = [
-      '_id',
-      'id',
-      'email',
-      'apiKey',
-      'apiSecret',
-      'active',
-      'isDataFromDb',
-      'timezone',
-      'username',
-      'isSubAccount',
-      'isSubUser',
-      'subUsers',
-      'token',
-      ...passwordProp
-    ]
-    const { subUsers: reqSubUsers } = { ...session }
-    const subUsers = pickProps(reqSubUsers, allowedProps)
-    const data = { ...session, subUsers }
-
-    return pickProps(data, allowedProps)
   }
 }
 
