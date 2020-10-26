@@ -1,9 +1,9 @@
 'use strict'
 
 const { omit } = require('lodash')
-const {
-  FILTER_CONDITIONS
-} = require('bfx-report/workers/loc.api/helpers')
+const FILTER_CONDITIONS = require(
+  'bfx-report/workers/loc.api/helpers/filter.conditions'
+)
 
 const { serializeVal } = require('./serialization')
 const SQL_OPERATORS = require('./sql.operators')
