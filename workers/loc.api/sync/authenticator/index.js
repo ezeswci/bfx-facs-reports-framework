@@ -18,6 +18,9 @@ const {
   UserRemovingError,
   UserWasPreviouslyStoredInDbError
 } = require('../../errors')
+const {
+  generateSubUserName
+} = require('./helpers')
 
 class Authenticator {
   constructor (
@@ -92,7 +95,7 @@ class Authenticator {
       throw new AuthError()
     }
 
-    const username = this.generateSubUserName(
+    const username = generateSubUserName(
       { masterUserId, username: uName },
       isSubAccount,
       isSubUser
@@ -218,7 +221,7 @@ class Authenticator {
     } = await this.rService._checkAuthInApi({
       auth: { apiKey, apiSecret }
     })
-    const username = this.generateSubUserName(
+    const username = generateSubUserName(
       { username: uName },
       isSubAccountFromDb
     )
@@ -395,7 +398,7 @@ class Authenticator {
       this.crypto.hashPassword(password)
     ])
 
-    const username = this.generateSubUserName(
+    const username = generateSubUserName(
       { username: uName },
       isSubAccount,
       isSubUser
@@ -832,19 +835,6 @@ class Authenticator {
     })
 
     return isArray ? res : res[0]
-  }
-
-  generateSubUserName (user, isSubAccount, isSubUser) {
-    const { masterUserId, username: uName } = { ...user }
-    const subAccountNameEnding = isSubAccount
-      ? '-sub-account'
-      : ''
-    const subUserNameEnding = isSubUser
-      ? `-sub-user-${masterUserId}`
-      : ''
-    const username = `${uName}${subAccountNameEnding}${subUserNameEnding}`
-
-    return username
   }
 
   pickProps (
