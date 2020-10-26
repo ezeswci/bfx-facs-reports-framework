@@ -1,7 +1,6 @@
 'use strict'
 
 const { v4: uuidv4 } = require('uuid')
-const { pick } = require('lodash')
 const {
   decorate,
   injectable,
@@ -19,7 +18,8 @@ const {
   UserWasPreviouslyStoredInDbError
 } = require('../../errors')
 const {
-  generateSubUserName
+  generateSubUserName,
+  pickProps
 } = require('./helpers')
 
 class Authenticator {
@@ -520,7 +520,7 @@ class Authenticator {
         password: isReturnedPassword ? password : null
       }
 
-      return this.pickProps(
+      return pickProps(
         user,
         projection,
         {
@@ -548,7 +548,7 @@ class Authenticator {
         throw new AuthError()
       }
 
-      return this.pickProps(
+      return pickProps(
         session,
         projection,
         {
@@ -601,7 +601,7 @@ class Authenticator {
     } = { ...params }
 
     const _user = await this.dao.getUser(filter, params)
-    const user = this.pickProps(
+    const user = pickProps(
       _user,
       projection,
       {
@@ -660,7 +660,7 @@ class Authenticator {
       })
 
     const _users = await this.dao.getUsers(filter, params)
-    const users = this.pickProps(
+    const users = pickProps(
       _users,
       projection,
       {
@@ -837,55 +837,6 @@ class Authenticator {
     return isArray ? res : res[0]
   }
 
-  pickProps (
-    data,
-    projection,
-    opts
-  ) {
-    if (
-      !Array.isArray(projection) ||
-      projection.length === 0
-    ) {
-      return data
-    }
-
-    const {
-      isAppliedProjectionToSubUser,
-      subUsersProjection = projection
-    } = { ...opts }
-
-    const isArray = Array.isArray(data)
-    const dataArr = isArray ? data : [data]
-
-    const res = dataArr.map((item) => {
-      if (!item || typeof item !== 'object') {
-        return item
-      }
-
-      if (
-        !isAppliedProjectionToSubUser ||
-        !Array.isArray(subUsersProjection) ||
-        subUsersProjection.length === 0 ||
-        !Array.isArray(item.subUsers) ||
-        item.subUsers.length === 0
-      ) {
-        return pick(item, projection)
-      }
-
-      const subUsers = item.subUsers.map((subUser) => {
-        if (!subUser || typeof subUser !== 'object') {
-          return subUser
-        }
-
-        return pick(subUser, subUsersProjection)
-      })
-
-      return pick({ ...item, subUsers }, projection)
-    })
-
-    return isArray ? res : res[0]
-  }
-
   pickSessionProps (session, isReturnedPassword) {
     const passwordProp = isReturnedPassword
       ? ['password']
@@ -907,10 +858,10 @@ class Authenticator {
       ...passwordProp
     ]
     const { subUsers: reqSubUsers } = { ...session }
-    const subUsers = this.pickProps(reqSubUsers, allowedProps)
+    const subUsers = pickProps(reqSubUsers, allowedProps)
     const data = { ...session, subUsers }
 
-    return this.pickProps(data, allowedProps)
+    return pickProps(data, allowedProps)
   }
 }
 
