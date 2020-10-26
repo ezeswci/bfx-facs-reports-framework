@@ -748,19 +748,17 @@ class Authenticator {
       }
     )
 
-    await this.dao.executeQueriesInTrans(async () => {
-      const res = await this.dao.removeElemsFromDb(
-        this.TABLES_NAMES.USERS,
-        null,
-        { _id, email: emailFromDb }
-      )
+    const res = await this.dao.removeElemsFromDb(
+      this.TABLES_NAMES.USERS,
+      null,
+      { _id, email: emailFromDb }
+    )
 
-      if (res && res.changes < 1) {
-        throw new UserRemovingError()
-      }
+    if (res && res.changes < 1) {
+      throw new UserRemovingError()
+    }
 
-      this.removeUserSessionByToken(token)
-    })
+    this.removeUserSessionByToken(token)
 
     return true
   }
