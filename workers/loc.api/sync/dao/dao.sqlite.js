@@ -37,7 +37,8 @@ const {
   getTriggerCreationQuery,
   isContainedSameMts,
   getTablesNamesQuery,
-  normalizeUserData
+  normalizeUserData,
+  getUsersIds
 } = require('./helpers')
 const {
   RemoveListElemsError,
@@ -360,13 +361,7 @@ class SqliteDAO extends DAO {
   async _fillSubUsers (users) {
     const isArray = Array.isArray(users)
     const _users = isArray ? users : [users]
-    const usersIds = _users
-      .filter((user) => {
-        const { _id } = { ...user }
-
-        return Number.isInteger(_id)
-      })
-      .map(({ _id }) => _id)
+    const usersIds = getUsersIds(_users)
 
     if (usersIds.length === 0) {
       return users

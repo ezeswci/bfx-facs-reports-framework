@@ -30,7 +30,8 @@ const getTimeframeFilter = require('./get-timeframe-filter')
 const getTimeframeQuery = require('./get-timeframe-query')
 const getTablesNamesQuery = require('./get-tables-names-query')
 const {
-  normalizeUserData
+  normalizeUserData,
+  getUsersIds
 } = require('./users')
 
 module.exports = {
@@ -59,5 +60,6 @@ module.exports = {
   getTimeframeFilter,
   getTimeframeQuery,
   getTablesNamesQuery,
-  normalizeUserData
+  normalizeUserData,
+  getUsersIds
 }
