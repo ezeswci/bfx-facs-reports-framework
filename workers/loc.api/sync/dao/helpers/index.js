@@ -33,7 +33,8 @@ const {
   normalizeUserData,
   getUsersIds,
   fillSubUsers,
-  getSubUsersQuery
+  getSubUsersQuery,
+  getUsersQuery
 } = require('./users')
 
 module.exports = {
@@ -65,5 +66,6 @@ module.exports = {
   normalizeUserData,
   getUsersIds,
   fillSubUsers,
-  getSubUsersQuery
+  getSubUsersQuery,
+  getUsersQuery
 }
