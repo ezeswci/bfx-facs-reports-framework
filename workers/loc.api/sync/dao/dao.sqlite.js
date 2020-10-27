@@ -38,7 +38,8 @@ const {
   isContainedSameMts,
   getTablesNamesQuery,
   normalizeUserData,
-  getUsersIds
+  getUsersIds,
+  fillSubUsers
 } = require('./helpers')
 const {
   RemoveListElemsError,
@@ -370,23 +371,7 @@ class SqliteDAO extends DAO {
     const _subUsers = await this._getSubUsersByMasterUser(
       { $in: { _id: usersIds } }
     )
-
-    const filledUsers = _users.map((user) => {
-      const { _id } = { ...user }
-      const subUsers = _subUsers.filter((subUser) => {
-        const { masterUserId } = { ...subUser }
-
-        return (
-          Number.isInteger(masterUserId) &&
-          masterUserId === _id
-        )
-      })
-
-      return {
-        ...user,
-        subUsers
-      }
-    })
+    const filledUsers = fillSubUsers(_users, _subUsers)
 
     return isArray ? filledUsers : filledUsers[0]
   }
