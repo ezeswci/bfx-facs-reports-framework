@@ -39,7 +39,8 @@ const {
   getTablesNamesQuery,
   normalizeUserData,
   getUsersIds,
-  fillSubUsers
+  fillSubUsers,
+  getSubUsersQuery
 } = require('./helpers')
 const {
   RemoveListElemsError,
@@ -368,37 +369,16 @@ class SqliteDAO extends DAO {
       return users
     }
 
-    const _subUsers = await this._getSubUsersByMasterUser(
-      { $in: { _id: usersIds } }
+    const { sql, values } = getSubUsersQuery(
+      { $in: { _id: usersIds } },
+      ['_id']
     )
+    const res = await this._all(sql, values)
+
+    const _subUsers = normalizeUserData(res)
     const filledUsers = fillSubUsers(_users, _subUsers)
 
     return isArray ? filledUsers : filledUsers[0]
-  }
-
-  async _getSubUsersByMasterUser (
-    masterUser,
-    sort = ['_id']
-  ) {
-    const tableAlias = 'mu'
-    const {
-      where,
-      values
-    } = getWhereQuery(masterUser, { alias: tableAlias })
-    const _sort = getOrderQuery(sort)
-
-    const sql = `SELECT su.*, ${tableAlias}._id AS masterUserId
-      FROM ${this.TABLES_NAMES.USERS} AS su
-      INNER JOIN ${this.TABLES_NAMES.SUB_ACCOUNTS} AS sa
-        ON su._id = sa.subUserId
-      INNER JOIN ${this.TABLES_NAMES.USERS} AS ${tableAlias}
-        ON ${tableAlias}._id = sa.masterUserId
-      ${where}
-      ${_sort}`
-
-    const res = await this._all(sql, values)
-
-    return normalizeUserData(res)
   }
 
   async _getTablesNames () {

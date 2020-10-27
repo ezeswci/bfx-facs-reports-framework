@@ -32,7 +32,8 @@ const getTablesNamesQuery = require('./get-tables-names-query')
 const {
   normalizeUserData,
   getUsersIds,
-  fillSubUsers
+  fillSubUsers,
+  getSubUsersQuery
 } = require('./users')
 
 module.exports = {
@@ -63,5 +64,6 @@ module.exports = {
   getTablesNamesQuery,
   normalizeUserData,
   getUsersIds,
-  fillSubUsers
+  fillSubUsers,
+  getSubUsersQuery
 }
