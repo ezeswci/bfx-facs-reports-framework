@@ -36,7 +36,8 @@ const {
   getTableCreationQuery,
   getTriggerCreationQuery,
   isContainedSameMts,
-  getTablesNamesQuery
+  getTablesNamesQuery,
+  normalizeUserData
 } = require('./helpers')
 const {
   RemoveListElemsError,
@@ -341,37 +342,7 @@ class SqliteDAO extends DAO {
         return _res
       }
 
-      const res = isFoundOne
-        ? {
-          ..._res,
-          active: !!_res.active,
-          isDataFromDb: !!_res.isDataFromDb,
-          isSubAccount: !!_res.isSubAccount,
-          isSubUser: !!_res.isSubUser,
-          haveSubUsers: !!_res.haveSubUsers,
-          isNotProtected: !!_res.isNotProtected
-        }
-        : _res.map((user) => {
-          const {
-            active,
-            isDataFromDb,
-            isSubAccount,
-            isSubUser,
-            haveSubUsers,
-            isNotProtected
-          } = { ...user }
-
-          return {
-            ...user,
-            active: !!active,
-            isDataFromDb: !!isDataFromDb,
-            isSubAccount: !!isSubAccount,
-            isSubUser: !!isSubUser,
-            haveSubUsers: !!haveSubUsers,
-            isNotProtected: !!isNotProtected
-          }
-        })
-
+      const res = normalizeUserData(_res)
       const usersFilledSubUsers = isFilledSubUsers
         ? await this._fillSubUsers(res)
         : res
@@ -447,24 +418,7 @@ class SqliteDAO extends DAO {
 
     const res = await this._all(sql, values)
 
-    return res.map((user) => {
-      const {
-        active,
-        isDataFromDb,
-        isSubAccount,
-        isSubUser,
-        isNotProtected
-      } = { ...user }
-
-      return {
-        ...user,
-        active: !!active,
-        isDataFromDb: !!isDataFromDb,
-        isSubAccount: !!isSubAccount,
-        isSubUser: !!isSubUser,
-        isNotProtected: !!isNotProtected
-      }
-    })
+    return normalizeUserData(res)
   }
 
   async _getTablesNames () {
