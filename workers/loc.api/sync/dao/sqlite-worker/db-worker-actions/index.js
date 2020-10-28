@@ -7,7 +7,8 @@ const dbWorkerActions = require(
 const DB_WORKER_ACTIONS = require('./db-worker-actions.const')
 const ACTIONS_MAP = {
   [DB_WORKER_ACTIONS.RUN_IN_TRANS]: require('./action-run-in-trans'),
-  [DB_WORKER_ACTIONS.UPDATE_RECORD_OF]: require('./action-update-record-of')
+  [DB_WORKER_ACTIONS.UPDATE_RECORD_OF]: require('./action-update-record-of'),
+  [DB_WORKER_ACTIONS.GET_USERS]: require('./action-get-users')
 }
 
 module.exports = (db, args) => {
