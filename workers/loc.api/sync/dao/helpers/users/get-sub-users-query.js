@@ -5,13 +5,24 @@ const getOrderQuery = require('../get-order-query')
 
 module.exports = (
   masterUser,
-  sort = ['_id']
+  opts
 ) => {
+  const {
+    sort = ['_id'],
+    isNotPrefixed
+  } = { ...opts }
+
   const tableAlias = 'mu'
   const {
     where,
     values
-  } = getWhereQuery(masterUser, { alias: tableAlias })
+  } = getWhereQuery(
+    masterUser,
+    {
+      alias: tableAlias,
+      isNotPrefixed
+    }
+  )
   const _sort = getOrderQuery(sort)
 
   const sql = `SELECT su.*, ${tableAlias}._id AS masterUserId

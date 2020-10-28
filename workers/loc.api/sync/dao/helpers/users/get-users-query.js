@@ -10,14 +10,18 @@ module.exports = (filter, opts) => {
     haveNotSubUsers,
     haveSubUsers,
     sort = ['_id'],
-    limit
+    limit,
+    isNotPrefixed
   } = { ...opts }
 
   const userTableAlias = 'u'
   const {
     limit: _limit,
     limitVal
-  } = getLimitQuery({ limit: isFoundOne ? null : limit })
+  } = getLimitQuery({
+    limit: isFoundOne ? null : limit,
+    isNotPrefixed
+  })
   const {
     where,
     values: _values
@@ -25,7 +29,8 @@ module.exports = (filter, opts) => {
     filter,
     {
       isNotSetWhereClause: true,
-      alias: userTableAlias
+      alias: userTableAlias,
+      isNotPrefixed
     }
   )
   const haveSubUsersQuery = haveSubUsers

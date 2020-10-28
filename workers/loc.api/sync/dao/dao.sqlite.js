@@ -309,7 +309,7 @@ class SqliteDAO extends DAO {
         : await this._all(sql, values)
 
       if (
-        !_res &&
+        !_res ||
         typeof _res !== 'object'
       ) {
         return _res
@@ -341,7 +341,7 @@ class SqliteDAO extends DAO {
 
     const { sql, values } = getSubUsersQuery(
       { $in: { _id: usersIds } },
-      ['_id']
+      { sort: ['_id'] }
     )
     const res = await this._all(sql, values)
 
