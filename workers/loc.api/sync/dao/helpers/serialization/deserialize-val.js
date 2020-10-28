@@ -2,7 +2,7 @@
 
 const {
   tryParseJSON
-} = require('../../../../helpers')
+} = require('../../../../helpers/utils')
 
 module.exports = (
   val,
