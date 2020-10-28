@@ -592,6 +592,35 @@ class BetterSqliteDAO extends DAO {
   /**
    * @override
    */
+  getUser (
+    filter,
+    {
+      isNotInTrans,
+      haveNotSubUsers,
+      haveSubUsers,
+      isFilledSubUsers,
+      sort = ['_id']
+    } = {}
+  ) {
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.GET_USERS,
+      params: {
+        filter,
+        opts: {
+          isNotInTrans,
+          isFoundOne: true,
+          haveNotSubUsers,
+          haveSubUsers,
+          isFilledSubUsers,
+          sort
+        }
+      }
+    })
+  }
+
+  /**
+   * @override
+   */
   getElemsInCollBy (
     collName,
     {
