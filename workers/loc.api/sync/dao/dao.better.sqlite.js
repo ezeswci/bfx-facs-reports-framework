@@ -57,7 +57,6 @@ const DB_WORKER_ACTIONS = require(
   './sqlite-worker/db-worker-actions/db-worker-actions.const'
 )
 
-// TODO:
 class BetterSqliteDAO extends DAO {
   constructor (...args) {
     super(...args)
@@ -613,6 +612,36 @@ class BetterSqliteDAO extends DAO {
           haveSubUsers,
           isFilledSubUsers,
           sort
+        }
+      }
+    })
+  }
+
+  /**
+   * @override
+   */
+  getUsers (
+    filter,
+    {
+      isNotInTrans,
+      haveNotSubUsers,
+      haveSubUsers,
+      isFilledSubUsers,
+      sort = ['_id'],
+      limit
+    } = {}
+  ) {
+    return this.asyncQuery({
+      action: DB_WORKER_ACTIONS.GET_USERS,
+      params: {
+        filter,
+        opts: {
+          isNotInTrans,
+          haveNotSubUsers,
+          haveSubUsers,
+          isFilledSubUsers,
+          sort,
+          limit
         }
       }
     })
