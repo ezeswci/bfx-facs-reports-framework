@@ -3,6 +3,7 @@
 const getWhereQuery = require('../get-where-query')
 const getLimitQuery = require('../get-limit-query')
 const getOrderQuery = require('../get-order-query')
+const TABLES_NAMES = require('../../../schema/tables-names')
 
 module.exports = (filter, opts) => {
   const {
@@ -50,8 +51,8 @@ module.exports = (filter, opts) => {
   const values = { ..._values, ...limitVal }
 
   const sql = `SELECT ${userTableAlias}.*, sa.subUserId as haveSubUsers
-    FROM ${this.TABLES_NAMES.USERS} AS ${userTableAlias}
-    LEFT JOIN ${this.TABLES_NAMES.SUB_ACCOUNTS} AS sa
+    FROM ${TABLES_NAMES.USERS} AS ${userTableAlias}
+    LEFT JOIN ${TABLES_NAMES.SUB_ACCOUNTS} AS sa
       ON ${userTableAlias}._id = sa.masterUserId
     ${_where}
     ${group}
