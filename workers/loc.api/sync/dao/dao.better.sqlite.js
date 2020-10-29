@@ -771,7 +771,7 @@ class BetterSqliteDAO extends DAO {
       } = getWhereQuery(filter, { isNotPrefixed: true })
       const fields = Object.keys(newItem).map((item) => {
         const key = `new_${item}`
-        params[key] = newItem[item]
+        values[key] = newItem[item]
 
         return `${item} = $${key}`
       }).join(', ')
