@@ -76,7 +76,7 @@ const _getKeysAndValuesForWhereQuery = (
     : ''
 
   if (!isArr) {
-    const name = `$${_alias}${origFieldName}`
+    const name = `${_alias}${origFieldName}`
     const {
       key,
       queryValKey
@@ -91,7 +91,7 @@ const _getKeysAndValuesForWhereQuery = (
 
   const subValues = {}
   const preKey = filter[origFieldName].map((item, j) => {
-    const name = `$${_alias}${origFieldName}_${j}`
+    const name = `${_alias}${origFieldName}_${j}`
     const {
       key,
       queryValKey
