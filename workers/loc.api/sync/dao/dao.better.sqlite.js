@@ -405,7 +405,7 @@ class BetterSqliteDAO extends DAO {
       const {
         where,
         values
-      } = getWhereQuery(_obj)
+      } = getWhereQuery(_obj, { isNotPrefixed: true })
       const {
         placeholders,
         placeholderVal
@@ -682,7 +682,7 @@ class BetterSqliteDAO extends DAO {
     const {
       limit: _limit,
       limitVal
-    } = getLimitQuery({ limit })
+    } = getLimitQuery({ limit, isNotPrefixed: true })
 
     const sql = `SELECT ${distinct}${_projection} FROM ${_subQuery}
       ${where}
