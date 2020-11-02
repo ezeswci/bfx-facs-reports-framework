@@ -9,6 +9,11 @@ const MAIN_DB_WORKER_ACTIONS = require(
   'bfx-facs-db-better-sqlite/worker/db-worker-actions/db-worker-actions.const'
 )
 const {
+  getLimitNotMoreThan,
+  checkFilterParams,
+  normalizeFilterParams
+} = require('bfx-report/workers/loc.api/helpers')
+const {
   AuthError
 } = require('bfx-report/workers/loc.api/errors')
 
@@ -19,9 +24,6 @@ const {
   mixUserIdToArrData,
   serializeObj,
   filterModelNameMap,
-  normalizeFilterParams,
-  checkFilterParams,
-  getLimitNotMoreThan,
   convertDataType,
   getInsertableArrayObjectsFilter,
   getStatusMessagesFilter,
