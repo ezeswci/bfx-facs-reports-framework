@@ -1,6 +1,7 @@
 'use strict'
 
 const EventEmitter = require('events')
+const { promisify } = require('util')
 const {
   isEmpty,
   cloneDeep
@@ -16,6 +17,7 @@ const {
   injectable,
   inject
 } = require('inversify')
+const setImmediatePromise = promisify(setImmediate)
 
 const TYPES = require('../../di/types')
 const {
@@ -120,6 +122,7 @@ class DataInserter extends EventEmitter {
 
   async setProgress (progress) {
     for (const handler of this._asyncProgressHandlers) {
+      await setImmediatePromise()
       await handler(progress)
     }
 
@@ -197,6 +200,7 @@ class DataInserter extends EventEmitter {
         return
       }
 
+      await setImmediatePromise()
       await hook.execute()
     }
   }
@@ -281,6 +285,8 @@ class DataInserter extends EventEmitter {
       const { start } = schema
 
       for (const [symbol, dates] of start) {
+        await setImmediatePromise()
+
         const {
           baseStartFrom = 0,
           baseStartTo
@@ -334,10 +340,12 @@ class DataInserter extends EventEmitter {
     return progress
   }
 
-  _getDataFromApi (methodApi, args, isCheckCall) {
+  async _getDataFromApi (methodApi, args, isCheckCall) {
     if (!this.apiMiddleware.hasMethod(methodApi)) {
       throw new FindMethodError()
     }
+
+    await setImmediatePromise()
 
     return getDataFromApi(
       methodApi,
@@ -370,6 +378,8 @@ class DataInserter extends EventEmitter {
         if (this._isInterrupted) {
           return
         }
+
+        await setImmediatePromise()
 
         const addApiParams = name === this.ALLOWED_COLLS.CANDLES
           ? {
@@ -547,6 +557,7 @@ class DataInserter extends EventEmitter {
         isAllData = true
       }
 
+      await setImmediatePromise()
       await this.dao.insertElemsToDb(
         collName,
         sessionAuth,
@@ -604,10 +615,12 @@ class DataInserter extends EventEmitter {
       Array.isArray(elemsFromApi) &&
       elemsFromApi.length > 0
     ) {
+      await setImmediatePromise()
       await this.dao.removeElemsFromDbIfNotInLists(
         collName,
         { [field]: elemsFromApi }
       )
+      await setImmediatePromise()
       await this.dao.insertElemsToDbIfNotExists(
         collName,
         null,
@@ -631,6 +644,7 @@ class DataInserter extends EventEmitter {
       model
     } = { ...schema }
 
+    await setImmediatePromise()
     const publicСollsСonf = await this.dao.getElemsInCollBy(
       this.TABLES_NAMES.PUBLIC_COLLS_CONF,
       {
@@ -707,10 +721,12 @@ class DataInserter extends EventEmitter {
         return obj
       }, {})
 
+      await setImmediatePromise()
       await this.dao.removeElemsFromDbIfNotInLists(
         collName,
         lists
       )
+      await setImmediatePromise()
       await this.dao.insertElemsToDbIfNotExists(
         collName,
         null,
@@ -780,10 +796,12 @@ class DataInserter extends EventEmitter {
         return obj
       }, {})
 
+      await setImmediatePromise()
       await this.dao.removeElemsFromDbIfNotInLists(
         collName,
         lists
       )
+      await setImmediatePromise()
       await this.dao.insertElemsToDb(
         collName,
         null,

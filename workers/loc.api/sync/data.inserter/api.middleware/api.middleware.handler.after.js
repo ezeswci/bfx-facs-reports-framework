@@ -1,10 +1,12 @@
 'use strict'
 
+const { promisify } = require('util')
 const {
   decorate,
   injectable,
   inject
 } = require('inversify')
+const setImmediatePromise = promisify(setImmediate)
 
 const TYPES = require('../../../di/types')
 const SYNC_API_METHODS = require('../../schema/sync.api.methods')
@@ -56,6 +58,8 @@ class ApiMiddlewareHandlerAfter {
         continue
       }
 
+      await setImmediatePromise()
+
       const {
         closePrice,
         sumAmount
@@ -105,11 +109,15 @@ class ApiMiddlewareHandlerAfter {
     )
   }
 
-  [SYNC_API_METHODS.LEDGERS] (args, apiRes) {
-    const res = apiRes.res.map(item => {
+  async [SYNC_API_METHODS.LEDGERS] (args, apiRes) {
+    const res = []
+
+    for (const item of apiRes.res) {
+      await setImmediatePromise()
+
       const { balance } = { ...item }
 
-      return {
+      res.push({
         ...item,
         ...getFlagsFromLedgerDescription(
           item,
@@ -133,8 +141,8 @@ class ApiMiddlewareHandlerAfter {
           ]
         ),
         _nativeBalance: balance
-      }
-    })
+      })
+    }
 
     return {
       ...apiRes,

@@ -1,6 +1,8 @@
 'use strict'
 
+const { promisify } = require('util')
 const moment = require('moment')
+const setImmediatePromise = promisify(setImmediate)
 
 const {
   decorate,
@@ -165,6 +167,7 @@ class CurrencyConverter {
     }
 
     for (const [symbol, conversion] of synonymous) {
+      await setImmediatePromise()
       const price = await finderFn(symbol)
 
       if (
@@ -486,6 +489,8 @@ class CurrencyConverter {
       ) {
         continue
       }
+
+      await setImmediatePromise()
 
       const symbol = this._getConvertingSymb(item[symbolFieldName])
       const isSameSymb = convertTo === symbol
@@ -855,6 +860,8 @@ class CurrencyConverter {
       ) {
         continue
       }
+
+      await setImmediatePromise()
 
       const _symbol = splitSymbolPairs(item[symbolFieldName])[1]
       const symbol = this._getConvertingSymb(_symbol)

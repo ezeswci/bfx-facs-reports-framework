@@ -1,10 +1,12 @@
 'use strict'
 
+const { promisify } = require('util')
 const {
   decorate,
   injectable,
   inject
 } = require('inversify')
+const setImmediatePromise = promisify(setImmediate)
 
 const TYPES = require('../../../di/types')
 const { CONVERT_TO } = require('../const')
@@ -86,8 +88,9 @@ class ConvertCurrencyHook extends DataInserterHook {
       while (true) {
         count += 1
 
-        if (count > 100) break
+        if (count > 1000) break
 
+        await setImmediatePromise()
         const elems = await this.dao.getElemsInCollBy(
           collName,
           {
@@ -113,6 +116,7 @@ class ConvertCurrencyHook extends DataInserterHook {
             }
           )
 
+        await setImmediatePromise()
         await this.dao.updateElemsInCollBy(
           collName,
           convElems,

@@ -1,5 +1,6 @@
 'use strict'
 
+const { promisify } = require('util')
 const {
   isEmpty
 } = require('lodash')
@@ -15,6 +16,7 @@ const {
   injectable,
   inject
 } = require('inversify')
+const setImmediatePromise = promisify(setImmediate)
 
 const TYPES = require('../../../di/types')
 const {
@@ -103,6 +105,7 @@ class DataChecker {
         continue
       }
 
+      await setImmediatePromise()
       await this._checkItemNewDataArrObjType(
         method,
         item,
@@ -240,6 +243,9 @@ class DataChecker {
       if (!isInsertableArrObjTypeOfColl(schema, true)) {
         continue
       }
+
+      await setImmediatePromise()
+
       if (
         schema.name === this.ALLOWED_COLLS.PUBLIC_TRADES ||
         schema.name === this.ALLOWED_COLLS.TICKERS_HISTORY
@@ -308,6 +314,8 @@ class DataChecker {
       if (this._isInterrupted) {
         return
       }
+
+      await setImmediatePromise()
 
       const {
         symbol,
@@ -538,6 +546,8 @@ class DataChecker {
         return
       }
 
+      await setImmediatePromise()
+
       const mtsMoment = moment.utc(configStart)
         .add(-1, 'days')
         .valueOf()
@@ -689,10 +699,12 @@ class DataChecker {
     )
   }
 
-  _getDataFromApi (methodApi, args) {
+  async _getDataFromApi (methodApi, args) {
     if (typeof this.rService[methodApi] !== 'function') {
       throw new FindMethodError()
     }
+
+    await setImmediatePromise()
 
     return getDataFromApi(
       (space, args) => this.rService[methodApi]

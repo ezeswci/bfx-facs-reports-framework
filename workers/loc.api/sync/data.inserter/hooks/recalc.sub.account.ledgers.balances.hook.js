@@ -1,6 +1,8 @@
 'use strict'
 
+const { promisify } = require('util')
 const { orderBy } = require('lodash')
+const setImmediatePromise = promisify(setImmediate)
 
 const {
   decorate,
@@ -137,28 +139,6 @@ class RecalcSubAccountLedgersBalancesHook extends DataInserterHook {
     }
   }
 
-  _getRecalcBalanceAsync (
-    auth,
-    recordsToGetBalances,
-    elem
-  ) {
-    return new Promise((resolve, reject) => {
-      setImmediate(() => {
-        try {
-          const res = this._getRecalcBalance(
-            auth,
-            recordsToGetBalances,
-            elem
-          )
-
-          resolve(res)
-        } catch (err) {
-          reject(err)
-        }
-      })
-    })
-  }
-
   _getFirstGroupedRecords (elems = []) {
     return elems.reduce((accum, curr) => {
       const {
@@ -194,6 +174,8 @@ class RecalcSubAccountLedgersBalancesHook extends DataInserterHook {
     const res = []
 
     for (const elem of firstGroupedRecords) {
+      await setImmediatePromise()
+
       const {
         mts,
         wallet,
@@ -224,6 +206,7 @@ class RecalcSubAccountLedgersBalancesHook extends DataInserterHook {
           continue
         }
 
+        await setImmediatePromise()
         const itemFromDb = await this.dao.getElemInCollBy(
           this.TABLES_NAMES.LEDGERS,
           {
@@ -284,8 +267,9 @@ class RecalcSubAccountLedgersBalancesHook extends DataInserterHook {
     while (true) {
       count += 1
 
-      if (count > 100) break
+      if (count > 1000) break
 
+      await setImmediatePromise()
       const elems = await this.dao.getElemsInCollBy(
         this.TABLES_NAMES.LEDGERS,
         {
@@ -295,7 +279,7 @@ class RecalcSubAccountLedgersBalancesHook extends DataInserterHook {
             $isNotNull: 'subUserId'
           },
           sort: [['mts', 1], ['_id', -1]],
-          limit: 20000
+          limit: 10000
         }
       )
 
@@ -306,6 +290,7 @@ class RecalcSubAccountLedgersBalancesHook extends DataInserterHook {
         break
       }
 
+      await setImmediatePromise()
       const firstGroupedRecords = this._getFirstGroupedRecords(elems)
       const initialElems = await this._getInitialElems(
         auth,
@@ -319,10 +304,12 @@ class RecalcSubAccountLedgersBalancesHook extends DataInserterHook {
       const recalcElems = []
 
       for (const elem of elems) {
+        await setImmediatePromise()
+
         const {
           balance,
           balanceUsd
-        } = await this._getRecalcBalanceAsync(
+        } = this._getRecalcBalance(
           auth,
           recordsToGetBalances,
           elem
@@ -336,6 +323,7 @@ class RecalcSubAccountLedgersBalancesHook extends DataInserterHook {
         })
       }
 
+      await setImmediatePromise()
       await this.dao.updateElemsInCollBy(
         this.TABLES_NAMES.LEDGERS,
         recalcElems,
