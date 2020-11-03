@@ -176,46 +176,38 @@ class SqliteDAO extends DAO {
       afterTransFn
     } = { ...opts }
 
-    return new Promise((resolve, reject) => {
-      this.db.serialize(async () => {
-        let isTransBegun = false
+    return this._serialize(async () => {
+      let isTransBegun = false
 
-        try {
-          if (typeof beforeTransFn === 'function') {
-            await beforeTransFn()
-          }
-
-          await this._transact()
-          isTransBegun = true
-
-          const res = isParallelize
-            ? await this._parallelize(asyncExecQuery)
-            : await this._serialize(asyncExecQuery)
-
-          await this._commit()
-
-          if (typeof afterTransFn === 'function') {
-            await afterTransFn()
-          }
-
-          resolve(res)
-        } catch (err) {
-          try {
-            if (isTransBegun) {
-              await this._rollback()
-            }
-            if (typeof afterTransFn === 'function') {
-              await afterTransFn()
-            }
-          } catch (err) {
-            reject(err)
-
-            return
-          }
-
-          reject(err)
+      try {
+        if (typeof beforeTransFn === 'function') {
+          await beforeTransFn()
         }
-      })
+
+        await this._transact()
+        isTransBegun = true
+
+        const res = isParallelize
+          ? await this._parallelize(asyncExecQuery)
+          : await this._serialize(asyncExecQuery)
+
+        await this._commit()
+
+        if (typeof afterTransFn === 'function') {
+          await afterTransFn()
+        }
+
+        return res
+      } catch (err) {
+        if (isTransBegun) {
+          await this._rollback()
+        }
+        if (typeof afterTransFn === 'function') {
+          await afterTransFn()
+        }
+
+        throw err
+      }
     })
   }
 
