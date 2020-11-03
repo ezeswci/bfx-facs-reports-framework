@@ -40,7 +40,8 @@ const {
   getWhereQuery,
   getGroupQuery,
   getSubQuery,
-  getLimitQuery
+  getLimitQuery,
+  manageTransaction
 } = require('./helpers')
 
 const {
@@ -80,6 +81,55 @@ class BetterSqliteDAO extends DAO {
     }
 
     return this.asyncQuery(args)
+  }
+
+  async _proccesTrans (
+    asyncExecQuery,
+    opts = {}
+  ) {
+    const {
+      beforeTransFn,
+      afterTransFn
+    } = { ...opts }
+
+    let isTransBegun = false
+
+    try {
+      if (typeof beforeTransFn === 'function') {
+        await beforeTransFn()
+      }
+
+      this.db.prepare('BEGIN TRANSACTION').run()
+      isTransBegun = true
+
+      const res = await asyncExecQuery()
+
+      this.db.prepare('COMMIT').run()
+
+      if (typeof afterTransFn === 'function') {
+        await afterTransFn()
+      }
+
+      return res
+    } catch (err) {
+      if (isTransBegun) {
+        this.db.prepare('ROLLBACK').run()
+      }
+      if (typeof afterTransFn === 'function') {
+        await afterTransFn()
+      }
+
+      throw err
+    }
+  }
+
+  async _beginTrans (
+    asyncExecQuery,
+    opts = {}
+  ) {
+    return manageTransaction(
+      () => this._proccesTrans(asyncExecQuery, opts)
+    )
   }
 
   _createTablesIfNotExists () {
