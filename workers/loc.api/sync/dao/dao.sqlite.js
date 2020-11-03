@@ -41,7 +41,8 @@ const {
   getUsersIds,
   fillSubUsers,
   getSubUsersQuery,
-  getUsersQuery
+  getUsersQuery,
+  manageTransaction
 } = require('./helpers')
 const {
   RemoveListElemsError,
@@ -56,12 +57,6 @@ const {
 } = require('../schema/const')
 
 class SqliteDAO extends DAO {
-  constructor (...args) {
-    super(...args)
-
-    this._transactionPromises = []
-  }
-
   _run (sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.run(sql, params, function (err) {
@@ -211,34 +206,13 @@ class SqliteDAO extends DAO {
     })
   }
 
-  async _manageTrans (...args) {
-    await Promise.allSettled(this._transactionPromises)
-
-    return this._proccesTrans(...args)
-  }
-
   async _beginTrans (
     asyncExecQuery,
     opts = {}
   ) {
-    const _transactionPromise = this._manageTrans(
-      asyncExecQuery,
-      opts
+    return manageTransaction(
+      () => this._proccesTrans(asyncExecQuery, opts)
     )
-    const length = this._transactionPromises
-      .push(_transactionPromise)
-    const index = length - 1
-
-    try {
-      const res = await _transactionPromise
-      this._transactionPromises.splice(index, 1)
-
-      return res
-    } catch (err) {
-      this._transactionPromises.splice(index, 1)
-
-      throw err
-    }
   }
 
   async _createTablesIfNotExists () {

@@ -36,6 +36,7 @@ const {
   getSubUsersQuery,
   getUsersQuery
 } = require('./users')
+const manageTransaction = require('./manage-transaction')
 
 module.exports = {
   mixUserIdToArrData,
@@ -67,5 +68,6 @@ module.exports = {
   getUsersIds,
   fillSubUsers,
   getSubUsersQuery,
-  getUsersQuery
+  getUsersQuery,
+  manageTransaction
 }
