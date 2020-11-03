@@ -58,6 +58,9 @@ const {
 const DB_WORKER_ACTIONS = require(
   './sqlite-worker/db-worker-actions/db-worker-actions.const'
 )
+const dbWorkerActions = require(
+  './sqlite-worker/db-worker-actions'
+)
 
 class BetterSqliteDAO extends DAO {
   constructor (...args) {
@@ -67,6 +70,16 @@ class BetterSqliteDAO extends DAO {
     this._initializeWalCheckpointRestart = this.db
       .initializeWalCheckpointRestart.bind(this.db)
     this.db = this.db.db
+  }
+
+  query (args, opts) {
+    const { withoutWorkerThreads } = { ...opts }
+
+    if (withoutWorkerThreads) {
+      return dbWorkerActions(this.db, args)
+    }
+
+    return this.asyncQuery(args)
   }
 
   _createTablesIfNotExists () {
@@ -79,7 +92,7 @@ class BetterSqliteDAO extends DAO {
     })
     const sql = getTableCreationQuery(models, true)
 
-    return this.asyncQuery({
+    return this.query({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
       sql,
       params: { transVersion: 'exclusive' }
@@ -90,7 +103,7 @@ class BetterSqliteDAO extends DAO {
     const models = this._getModelsMap({ omittedFields: [] })
     const sql = getTriggerCreationQuery(models, true)
 
-    return this.asyncQuery({
+    return this.query({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
       sql,
       params: { transVersion: 'exclusive' }
@@ -101,7 +114,7 @@ class BetterSqliteDAO extends DAO {
     const models = this._getModelsMap({ omittedFields: [] })
     const sql = getIndexCreationQuery(models)
 
-    return this.asyncQuery({
+    return this.query({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
       sql,
       params: { transVersion: 'exclusive' }
@@ -110,7 +123,7 @@ class BetterSqliteDAO extends DAO {
 
   async _getTablesNames () {
     const sql = getTablesNamesQuery()
-    const data = await this.asyncQuery({
+    const data = await this.query({
       action: MAIN_DB_WORKER_ACTIONS.ALL,
       sql
     })
@@ -123,11 +136,11 @@ class BetterSqliteDAO extends DAO {
   }
 
   async _enableWALJournalMode () {
-    await this.asyncQuery({
+    await this.query({
       action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'synchronous = NORMAL'
     })
-    await this.asyncQuery({
+    await this.query({
       action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'journal_mode = WAL'
     })
@@ -136,14 +149,14 @@ class BetterSqliteDAO extends DAO {
   }
 
   enableForeignKeys () {
-    return this.asyncQuery({
+    return this.query({
       action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'foreign_keys = ON'
     })
   }
 
   disableForeignKeys () {
-    return this.asyncQuery({
+    return this.query({
       action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'foreign_keys = OFF'
     })
@@ -155,7 +168,7 @@ class BetterSqliteDAO extends DAO {
       `DROP TABLE IF EXISTS ${name}`
     ))
 
-    return this.asyncQuery({
+    return this.query({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
       sql,
       params: { transVersion: 'exclusive' }
@@ -198,7 +211,7 @@ class BetterSqliteDAO extends DAO {
    * @override
    */
   getCurrDbVer () {
-    return this.asyncQuery({
+    return this.query({
       action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: 'user_version'
     })
@@ -212,7 +225,7 @@ class BetterSqliteDAO extends DAO {
       throw new DbVersionTypeError()
     }
 
-    return this.asyncQuery({
+    return this.query({
       action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
       sql: `user_version = ${version}`
     })
@@ -273,7 +286,7 @@ class BetterSqliteDAO extends DAO {
         await beforeTransFn()
       }
 
-      res = await this.asyncQuery({
+      res = await this.query({
         action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
         sql: isArray ? query : query[0],
         params: isArray ? params : params[0]
@@ -302,7 +315,8 @@ class BetterSqliteDAO extends DAO {
     opts = {}
   ) {
     const {
-      isReplacedIfExists
+      isReplacedIfExists,
+      withoutWorkerThreads
     } = { ...opts }
 
     const keys = Object.keys(obj)
@@ -319,11 +333,11 @@ class BetterSqliteDAO extends DAO {
       INTO ${name}(${projection})
       VALUES (${placeholders})`
 
-    await this.asyncQuery({
+    await this.query({
       action: MAIN_DB_WORKER_ACTIONS.RUN,
       sql,
       params
-    })
+    }, { withoutWorkerThreads })
   }
 
   /**
@@ -373,7 +387,7 @@ class BetterSqliteDAO extends DAO {
       return
     }
 
-    await this.asyncQuery({
+    await this.query({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
       sql,
       params
@@ -424,7 +438,7 @@ class BetterSqliteDAO extends DAO {
       return
     }
 
-    await this.asyncQuery({
+    await this.query({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
       sql,
       params
@@ -523,7 +537,7 @@ class BetterSqliteDAO extends DAO {
       ${sort}
       ${limit}`
 
-    const _res = await this.asyncQuery({
+    const _res = await this.query({
       action: MAIN_DB_WORKER_ACTIONS.ALL,
       sql,
       params: { ...values, ...limitVal }
@@ -600,10 +614,11 @@ class BetterSqliteDAO extends DAO {
       haveNotSubUsers,
       haveSubUsers,
       isFilledSubUsers,
-      sort = ['_id']
+      sort = ['_id'],
+      withoutWorkerThreads
     } = {}
   ) {
-    return this.asyncQuery({
+    return this.query({
       action: DB_WORKER_ACTIONS.GET_USERS,
       params: {
         filter,
@@ -616,7 +631,7 @@ class BetterSqliteDAO extends DAO {
           sort
         }
       }
-    })
+    }, { withoutWorkerThreads })
   }
 
   /**
@@ -633,7 +648,7 @@ class BetterSqliteDAO extends DAO {
       limit
     } = {}
   ) {
-    return this.asyncQuery({
+    return this.query({
       action: DB_WORKER_ACTIONS.GET_USERS,
       params: {
         filter,
@@ -692,7 +707,7 @@ class BetterSqliteDAO extends DAO {
       ${_sort}
       ${_limit}`
 
-    return this.asyncQuery({
+    return this.query({
       action: MAIN_DB_WORKER_ACTIONS.ALL,
       sql,
       params: { ...values, ...limitVal }
@@ -717,7 +732,7 @@ class BetterSqliteDAO extends DAO {
       ${where}
       ${_sort}`
 
-    return this.asyncQuery({
+    return this.query({
       action: MAIN_DB_WORKER_ACTIONS.GET,
       sql,
       params
@@ -730,8 +745,12 @@ class BetterSqliteDAO extends DAO {
   async updateCollBy (
     name,
     filter = {},
-    data = {}
+    data = {},
+    opts
   ) {
+    const {
+      withoutWorkerThreads
+    } = { ...opts }
     const {
       where,
       values: params
@@ -745,11 +764,11 @@ class BetterSqliteDAO extends DAO {
 
     const sql = `UPDATE ${name} SET ${fields} ${where}`
 
-    return this.asyncQuery({
+    return this.query({
       action: MAIN_DB_WORKER_ACTIONS.RUN,
       sql,
       params
-    })
+    }, { withoutWorkerThreads })
   }
 
   /**
@@ -786,7 +805,7 @@ class BetterSqliteDAO extends DAO {
       return
     }
 
-    await this.asyncQuery({
+    await this.query({
       action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
       sql,
       params
@@ -799,7 +818,7 @@ class BetterSqliteDAO extends DAO {
   async updateRecordOf (name, record) {
     const data = serializeObj(record)
 
-    const res = await this.asyncQuery({
+    const res = await this.query({
       action: DB_WORKER_ACTIONS.UPDATE_RECORD_OF,
       params: { data, name }
     })
@@ -816,7 +835,8 @@ class BetterSqliteDAO extends DAO {
   async removeElemsFromDb (
     name,
     auth,
-    data = {}
+    data = {},
+    opts
   ) {
     if (auth) {
       const { _id } = { ...auth }
@@ -829,17 +849,20 @@ class BetterSqliteDAO extends DAO {
     }
 
     const {
+      withoutWorkerThreads
+    } = { ...opts }
+    const {
       where,
       values: params
     } = getWhereQuery(data, { isNotPrefixed: true })
 
     const sql = `DELETE FROM ${name} ${where}`
 
-    return this.asyncQuery({
+    return this.query({
       action: MAIN_DB_WORKER_ACTIONS.RUN,
       sql,
       params
-    })
+    }, { withoutWorkerThreads })
   }
 
   /**
@@ -869,7 +892,7 @@ class BetterSqliteDAO extends DAO {
 
     const sql = `DELETE FROM ${name} ${where}`
 
-    return this.asyncQuery({
+    return this.query({
       action: MAIN_DB_WORKER_ACTIONS.RUN,
       sql,
       params
