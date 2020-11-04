@@ -290,21 +290,56 @@ class BetterSqliteDAO extends DAO {
   ) {
     const {
       beforeTransFn,
-      afterTransFn
+      afterTransFn,
+      withoutWorkerThreads
     } = { ...opts }
     const isArray = Array.isArray(sql)
-    const _sqlArr = isArray
-      ? sql
-      : [sql]
+    const sqlArr = isArray ? sql : [sql]
 
-    if (_sqlArr.length === 0) {
+    if (sqlArr.length === 0) {
       return
+    }
+    if (withoutWorkerThreads) {
+      return this._beginTrans(async () => {
+        const res = []
+
+        for (const sqlData of sqlArr) {
+          const _sql = typeof sqlData === 'string'
+            ? sqlData
+            : null
+          const _execQueryFn = typeof sqlData === 'function'
+            ? sqlData
+            : null
+          const _sqlData = typeof sqlData === 'object'
+            ? sqlData
+            : { sql: _sql, execQueryFn: _execQueryFn }
+          const { sql, values, execQueryFn } = { ..._sqlData }
+          const hasSql = sql && typeof sql === 'string'
+          const hasExecQueryFn = typeof execQueryFn === 'function'
+
+          if (!hasSql && !hasExecQueryFn) {
+            throw new SqlCorrectnessError()
+          }
+          if (hasSql) {
+            res.push(await this.query({
+              action: MAIN_DB_WORKER_ACTIONS.RUN,
+              sql,
+              params: values
+            }, { withoutWorkerThreads }))
+          }
+          if (hasExecQueryFn) {
+            res.push(await execQueryFn())
+          }
+        }
+
+        return isArray ? res : res[0]
+      }, { beforeTransFn, afterTransFn })
     }
 
     const {
       query,
       params
-    } = _sqlArr.reduce((accum, curr) => {
+    } = sqlArr.reduce((accum, curr) => {
       if (
         curr &&
         typeof curr === 'string'
