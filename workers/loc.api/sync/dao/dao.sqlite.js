@@ -414,9 +414,7 @@ class SqliteDAO extends DAO {
     } = {}
   ) {
     const isArray = Array.isArray(sql)
-    const sqlArr = isArray
-      ? sql
-      : [sql]
+    const sqlArr = isArray ? sql : [sql]
 
     if (sqlArr.length === 0) {
       return
@@ -426,25 +424,27 @@ class SqliteDAO extends DAO {
 
     return this._beginTrans(async () => {
       for (const sqlData of sqlArr) {
-        const _sqlObj = typeof sqlData === 'string'
-          ? { sql: sqlData }
-          : sqlData
-        const sqlObj = typeof _sqlObj === 'function'
-          ? { execQueryFn: _sqlObj }
-          : _sqlObj
-        const { sql, values, execQueryFn } = { ...sqlObj }
+        const _sql = typeof sqlData === 'string'
+          ? sqlData
+          : null
+        const _execQueryFn = typeof sqlData === 'function'
+          ? sqlData
+          : null
+        const _sqlData = typeof sqlData === 'object'
+          ? sqlData
+          : { sql: _sql, execQueryFn: _execQueryFn }
+        const { sql, values, execQueryFn } = { ..._sqlData }
+        const hasSql = sql && typeof sql === 'string'
+        const hasExecQueryFn = typeof execQueryFn === 'function'
 
-        if (
-          (!sql || typeof sql !== 'string') &&
-          typeof execQueryFn !== 'function'
-        ) {
+        if (!hasSql && !hasExecQueryFn) {
           throw new SqlCorrectnessError()
         }
 
-        if (sql) {
+        if (sql && typeof sql === 'string') {
           res.push(await this._run(sql, values))
         }
-        if (execQueryFn) {
+        if (typeof execQueryFn === 'function') {
           res.push(await execQueryFn())
         }
       }
