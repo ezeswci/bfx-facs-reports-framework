@@ -228,7 +228,7 @@ class SubAccount {
         isSubAccount: true,
         token
       }
-    })
+    }, { withoutWorkerThreads: true })
   }
 
   async recoverPassword (args) {
@@ -319,7 +319,7 @@ class SubAccount {
         isSubAccount,
         token
       }
-    })
+    }, { withoutWorkerThreads: true })
   }
 
   async updateSubAccount (args) {
@@ -540,7 +540,7 @@ class SubAccount {
         isSubAccount: true,
         token
       }
-    })
+    }, { withoutWorkerThreads: true })
 
     await this.dao.updateRecordOf(
       this.TABLES_NAMES.SCHEDULER,
