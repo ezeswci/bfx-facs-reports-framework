@@ -14,6 +14,9 @@ const mixUserIdToArrData = (
   auth,
   data = []
 ) => {
+  const isArray = Array.isArray(data)
+  const _data = isArray ? data : [data]
+
   if (auth) {
     const { _id, subUser } = { ...auth }
     const { _id: subUserId } = { ...subUser }
@@ -22,7 +25,7 @@ const mixUserIdToArrData = (
       throw new AuthError()
     }
 
-    for (const obj of data) {
+    for (const obj of _data) {
       if (
         !obj ||
         typeof obj !== 'object'
@@ -37,7 +40,7 @@ const mixUserIdToArrData = (
     }
   }
 
-  return data
+  return isArray ? _data : _data[0]
 }
 
 const convertDataType = (

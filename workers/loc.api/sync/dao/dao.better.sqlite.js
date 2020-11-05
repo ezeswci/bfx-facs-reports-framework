@@ -1,5 +1,7 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const {
   decorate,
   injectable,
@@ -426,6 +428,8 @@ class BetterSqliteDAO extends DAO {
   }
 
   /**
+   * To prevent blocking the Event Loop applies setImmediate
+   * and handles a transaction manually
    * @override
    */
   async insertElemsToDb (
@@ -437,15 +441,18 @@ class BetterSqliteDAO extends DAO {
     const {
       isReplacedIfExists
     } = { ...opts }
-    const _data = mixUserIdToArrData(
-      auth,
-      data
-    )
+
     const sql = []
     const params = []
 
-    for (const obj of _data) {
-      const keys = Object.keys(obj)
+    for (const obj of data) {
+      await setImmediatePromise()
+
+      const _obj = mixUserIdToArrData(
+        auth,
+        obj
+      )
+      const keys = Object.keys(_obj)
 
       if (keys.length === 0) {
         continue
@@ -455,7 +462,7 @@ class BetterSqliteDAO extends DAO {
       const {
         placeholders,
         placeholderVal
-      } = getPlaceholdersQuery(obj, keys, { isNotPrefixed: true })
+      } = getPlaceholdersQuery(_obj, keys, { isNotPrefixed: true })
       const replace = isReplacedIfExists
         ? ' OR REPLACE'
         : ''
@@ -472,14 +479,18 @@ class BetterSqliteDAO extends DAO {
       return
     }
 
-    await this.query({
-      action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
-      sql,
-      params
+    await this._beginTrans(async () => {
+      for (const [i, param] of params.entries()) {
+        await setImmediatePromise()
+
+        this.db.prepare(sql[i]).run(param)
+      }
     })
   }
 
   /**
+   * To prevent blocking the Event Loop applies setImmediate
+   * and handles a transaction manually
    * @override
    */
   async insertElemsToDbIfNotExists (
@@ -487,30 +498,32 @@ class BetterSqliteDAO extends DAO {
     auth,
     data = []
   ) {
-    const _data = mixUserIdToArrData(
-      auth,
-      data
-    )
     const sql = []
     const params = []
 
-    for (const obj of _data) {
-      const keys = Object.keys(obj)
+    for (const obj of data) {
+      await setImmediatePromise()
+
+      const _obj = mixUserIdToArrData(
+        auth,
+        obj
+      )
+      const keys = Object.keys(_obj)
 
       if (keys.length === 0) {
         continue
       }
 
-      const _obj = serializeObj(obj, keys)
+      const item = serializeObj(_obj, keys)
       const projection = getProjectionQuery(keys)
       const {
         where,
         values
-      } = getWhereQuery(_obj, { isNotPrefixed: true })
+      } = getWhereQuery(item, { isNotPrefixed: true })
       const {
         placeholders,
         placeholderVal
-      } = getPlaceholdersQuery(_obj, keys, { isNotPrefixed: true })
+      } = getPlaceholdersQuery(item, keys, { isNotPrefixed: true })
 
       sql.push(
         `INSERT INTO ${name}(${projection}) SELECT ${placeholders}
@@ -523,10 +536,12 @@ class BetterSqliteDAO extends DAO {
       return
     }
 
-    await this.query({
-      action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
-      sql,
-      params
+    await this._beginTrans(async () => {
+      for (const [i, param] of params.entries()) {
+        await setImmediatePromise()
+
+        this.db.prepare(sql[i]).run(param)
+      }
     })
   }
 
