@@ -139,7 +139,8 @@ class WrkReportFrameWorkApi extends WrkReportServiceApi {
             dbPathAbsolute,
             workerPathAbsolute,
             verbose: verboseSql,
-            isSqliteStoredInMemory
+            isSqliteStoredInMemory,
+            timeout: 30000
           }
         ]
       )
