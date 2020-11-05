@@ -152,7 +152,7 @@ class WSTransport {
 
           const user = await this.authenticator.signIn(
             { auth: payload.auth },
-            { isReturnedUser: true }
+            { isReturnedUser: true, isNotInTrans: true }
           )
           const {
             email,
@@ -199,7 +199,8 @@ class WSTransport {
     const usersIds = [...this._auth].map(([sid, user]) => user._id)
 
     return this.authenticator.getUsers(
-      { $in: { _id: usersIds } }
+      { $in: { _id: usersIds } },
+      { isNotInTrans: true }
     )
   }
 
