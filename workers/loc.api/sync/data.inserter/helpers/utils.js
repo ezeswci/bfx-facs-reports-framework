@@ -1,18 +1,20 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const {
   pick
 } = require('lodash')
+const { push } = require('../../helpers/forex-symbs')
 
-const normalizeApiData = (
+const normalizeApiData = async (
   data = [],
   model,
   parser = () => {}
 ) => {
   if (
     !model ||
-    typeof model !== 'object' ||
-    Object.keys(model).length === 0
+    typeof model !== 'object'
   ) {
     return data
   }
@@ -23,18 +25,23 @@ const normalizeApiData = (
     return data
   }
 
-  return data.map((item) => {
+  const res = []
+
+  for (const item of data) {
     if (
       !item ||
       typeof item !== 'object'
     ) {
-      return item
+      return push(item)
     }
 
-    parser(item)
+    await setImmediatePromise()
 
-    return pick(item, modelKeys)
-  })
+    parser(item)
+    res.push(pick(item, modelKeys))
+  }
+
+  return res
 }
 
 const getAuthFromDb = (authenticator) => {

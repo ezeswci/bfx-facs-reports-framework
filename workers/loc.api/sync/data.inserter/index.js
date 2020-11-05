@@ -561,7 +561,7 @@ class DataInserter extends EventEmitter {
       await this.dao.insertElemsToDb(
         collName,
         sessionAuth,
-        normalizeApiData(res, model),
+        await normalizeApiData(res, model),
         { isReplacedIfExists: true }
       )
 
@@ -730,7 +730,7 @@ class DataInserter extends EventEmitter {
       await this.dao.insertElemsToDbIfNotExists(
         collName,
         null,
-        normalizeApiData(elemsFromApi, model)
+        await normalizeApiData(elemsFromApi, model)
       )
     }
   }
@@ -805,7 +805,7 @@ class DataInserter extends EventEmitter {
       await this.dao.insertElemsToDb(
         collName,
         null,
-        normalizeApiData(elemsFromApi, model),
+        await normalizeApiData(elemsFromApi, model),
         { isReplacedIfExists: true }
       )
     }
