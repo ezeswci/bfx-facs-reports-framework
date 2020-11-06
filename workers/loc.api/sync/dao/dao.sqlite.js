@@ -1,5 +1,7 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const {
   decorate,
   injectable,
@@ -492,28 +494,51 @@ class SqliteDAO extends DAO {
     const {
       isReplacedIfExists
     } = { ...opts }
-    const _data = mixUserIdToArrData(
-      auth,
-      data
-    )
+
+    const sql = []
+    const params = []
+
+    for (const obj of data) {
+      await setImmediatePromise()
+
+      const _obj = mixUserIdToArrData(
+        auth,
+        obj
+      )
+      const keys = Object.keys(_obj)
+
+      if (keys.length === 0) {
+        continue
+      }
+
+      const projection = getProjectionQuery(keys)
+      const {
+        placeholders,
+        placeholderVal
+      } = getPlaceholdersQuery(_obj, keys)
+      const replace = isReplacedIfExists
+        ? ' OR REPLACE'
+        : ''
+
+      sql.push(
+        `INSERT${replace}
+          INTO ${name}(${projection})
+          VALUES (${placeholders})`
+      )
+      params.push(placeholderVal)
+    }
+
+    if (sql.length === 0) {
+      return
+    }
 
     await this._beginTrans(async () => {
       const promises = []
 
-      for (const obj of _data) {
-        const keys = Object.keys(obj)
+      for (const [i, param] of params.entries()) {
+        await setImmediatePromise()
 
-        if (keys.length === 0) {
-          continue
-        }
-
-        const promise = this.insertElemToDb(
-          name,
-          obj,
-          { isReplacedIfExists }
-        )
-
-        promises.push(promise)
+        promises.push(this._run(sql[i], param))
       }
 
       await Promise.all(promises)
@@ -528,36 +553,55 @@ class SqliteDAO extends DAO {
     auth,
     data = []
   ) {
-    const _data = mixUserIdToArrData(
-      auth,
-      data
-    )
+    const sql = []
+    const params = []
+
+    for (const obj of data) {
+      await setImmediatePromise()
+
+      const _obj = mixUserIdToArrData(
+        auth,
+        obj
+      )
+      const keys = Object.keys(_obj)
+
+      if (keys.length === 0) {
+        continue
+      }
+
+      const item = serializeObj(_obj, keys)
+      const projection = getProjectionQuery(keys)
+      const {
+        where,
+        values
+      } = getWhereQuery(item)
+      const {
+        placeholders,
+        placeholderVal
+      } = getPlaceholdersQuery(item, keys)
+
+      sql.push(
+        `INSERT INTO ${name}(${projection}) SELECT ${placeholders}
+          WHERE NOT EXISTS(SELECT 1 FROM ${name} ${where})`
+      )
+      params.push({ ...values, ...placeholderVal })
+    }
+
+    if (sql.length === 0) {
+      return
+    }
 
     await this._beginTrans(async () => {
-      for (const obj of _data) {
-        const keys = Object.keys(obj)
+      const promises = []
 
-        if (keys.length === 0) {
-          continue
-        }
+      for (const [i, param] of params.entries()) {
+        await setImmediatePromise()
 
-        const _obj = serializeObj(obj, keys)
-        const projection = getProjectionQuery(keys)
-        const {
-          where,
-          values
-        } = getWhereQuery(_obj)
-        const {
-          placeholders,
-          placeholderVal
-        } = getPlaceholdersQuery(_obj, keys)
+        promises.push(this._run(sql[i], param))
 
-        const sql = `INSERT INTO ${name}(${projection}) SELECT ${placeholders}
-                      WHERE NOT EXISTS(SELECT 1 FROM ${name} ${where})`
-
-        await this._run(sql, { ...values, ...placeholderVal })
+        await Promise.all(promises)
       }
-    })
+    }, { isParallelize: true })
   }
 
   /**
