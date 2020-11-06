@@ -784,15 +784,44 @@ class SqliteDAO extends DAO {
     filterPropNames = {},
     upPropNames = {}
   ) {
+    const sql = []
+    const params = []
+
+    for (const obj of data) {
+      await setImmediatePromise()
+
+      const filter = mapObjBySchema(obj, filterPropNames)
+      const newItem = mapObjBySchema(obj, upPropNames)
+      const {
+        where,
+        values
+      } = getWhereQuery(filter)
+      const fields = Object.keys(newItem).map((item) => {
+        const key = `$new_${item}`
+        values[key] = newItem[item]
+
+        return `${item} = ${key}`
+      }).join(', ')
+
+      sql.push(`UPDATE ${name} SET ${fields} ${where}`)
+      params.push(values)
+    }
+
+    if (sql.length === 0) {
+      return
+    }
+
     await this._beginTrans(async () => {
-      for (const item of data) {
-        await this.updateCollBy(
-          name,
-          mapObjBySchema(item, filterPropNames),
-          mapObjBySchema(item, upPropNames)
-        )
+      const promises = []
+
+      for (const [i, param] of params.entries()) {
+        await setImmediatePromise()
+
+        promises.push(this._run(sql[i], param))
       }
-    })
+
+      await Promise.all(promises)
+    }, { isParallelize: true })
   }
 
   /**
