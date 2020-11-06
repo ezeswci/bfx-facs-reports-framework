@@ -182,7 +182,7 @@ module.exports = ({
         )
 
         if (dbDriver === 'sqlite') {
-          return rService.ctx.dbSqlite_m0.db
+          return rService.ctx.dbSqlite_m0
         }
         if (dbDriver === 'better-sqlite') {
           return rService.ctx.dbBetterSqlite_m0

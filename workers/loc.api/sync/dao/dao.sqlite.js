@@ -1,5 +1,6 @@
 'use strict'
 
+const fs = require('fs')
 const { promisify } = require('util')
 const setImmediatePromise = promisify(setImmediate)
 const {
@@ -59,6 +60,13 @@ const {
 } = require('../schema/const')
 
 class SqliteDAO extends DAO {
+  constructor (...args) {
+    super(...args)
+
+    this.dbPath = this.db.opts.db
+    this.db = this.db.db
+  }
+
   _run (sql, params = []) {
     return new Promise((resolve, reject) => {
       this.db.run(sql, params, function (err) {
@@ -330,6 +338,29 @@ class SqliteDAO extends DAO {
     return data.map(({ name }) => name)
   }
 
+  async _enableWALJournalMode () {
+    await this._run('PRAGMA synchronous = NORMAL')
+    await this._run('PRAGMA journal_mode = WAL')
+
+    const walFile = `${this.dbPath}-wal`
+
+    setInterval(() => {
+      fs.stat(walFile, (err, stat) => {
+        if (err) {
+          if (err.code === 'ENOENT') return
+
+          throw err
+        }
+        if (stat.size < 100000000) {
+          return
+        }
+
+        this._run('PRAGMA wal_checkpoint(RESTART)')
+          .catch((err) => console.error(err))
+      })
+    }, 10000).unref()
+  }
+
   enableForeignKeys () {
     return this._run('PRAGMA foreign_keys = ON')
   }
@@ -354,8 +385,9 @@ class SqliteDAO extends DAO {
   /**
    * @override
    */
-  beforeMigrationHook () {
-    return this.enableForeignKeys()
+  async beforeMigrationHook () {
+    await this.enableForeignKeys()
+    await this._enableWALJournalMode()
   }
 
   /**
