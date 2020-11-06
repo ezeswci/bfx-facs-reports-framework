@@ -884,6 +884,8 @@ class BetterSqliteDAO extends DAO {
     const params = []
 
     for (const obj of data) {
+      await setImmediatePromise()
+
       const filter = mapObjBySchema(obj, filterPropNames)
       const newItem = mapObjBySchema(obj, upPropNames)
       const {
@@ -905,10 +907,12 @@ class BetterSqliteDAO extends DAO {
       return
     }
 
-    await this.query({
-      action: DB_WORKER_ACTIONS.RUN_IN_TRANS,
-      sql,
-      params
+    await this._beginTrans(async () => {
+      for (const [i, param] of params.entries()) {
+        await setImmediatePromise()
+
+        this.db.prepare(sql[i]).run(param)
+      }
     })
   }
 
