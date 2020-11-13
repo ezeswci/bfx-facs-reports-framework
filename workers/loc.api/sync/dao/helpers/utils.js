@@ -8,8 +8,6 @@ const {
   ObjectMappingError
 } = require('../../../errors')
 
-const { deserializeVal } = require('./serialization')
-
 const mixUserIdToArrData = (
   auth,
   data = []
@@ -41,28 +39,6 @@ const mixUserIdToArrData = (
   }
 
   return isArray ? _data : _data[0]
-}
-
-const convertDataType = (
-  arr = [],
-  boolFields
-) => {
-  arr.forEach(obj => {
-    Object.keys(obj).forEach(key => {
-      if (
-        obj &&
-        typeof obj === 'object'
-      ) {
-        obj[key] = deserializeVal(
-          obj[key],
-          key,
-          boolFields
-        )
-      }
-    })
-  })
-
-  return arr
 }
 
 const mapObjBySchema = (obj, schema = {}) => {
@@ -121,7 +97,6 @@ const isContainedSameMts = (
 
 module.exports = {
   mixUserIdToArrData,
-  convertDataType,
   mapObjBySchema,
   isContainedSameMts
 }

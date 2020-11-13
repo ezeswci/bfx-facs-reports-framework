@@ -11,7 +11,6 @@ const MAIN_DB_WORKER_ACTIONS = require(
   'bfx-facs-db-better-sqlite/worker/db-worker-actions/db-worker-actions.const'
 )
 const {
-  getLimitNotMoreThan,
   checkFilterParams,
   normalizeFilterParams
 } = require('bfx-report/workers/loc.api/helpers')
@@ -26,12 +25,8 @@ const {
   mixUserIdToArrData,
   serializeObj,
   filterModelNameMap,
-  convertDataType,
-  getInsertableArrayObjectsFilter,
-  getStatusMessagesFilter,
   isContainedSameMts,
   mapObjBySchema,
-
   getIndexCreationQuery,
   getTableCreationQuery,
   getTriggerCreationQuery,
@@ -64,6 +59,11 @@ const DB_WORKER_ACTIONS = require(
 const dbWorkerActions = require(
   './sqlite-worker/db-worker-actions'
 )
+const {
+  getParams,
+  getQuery,
+  convertData
+} = require('./helpers/find-in-coll-by')
 
 class BetterSqliteDAO extends DAO {
   constructor (...args) {
@@ -551,104 +551,47 @@ class BetterSqliteDAO extends DAO {
   async findInCollBy (
     method,
     reqArgs,
-    {
+    opts
+  ) {
+    const {
       isPrepareResponse = false,
       isPublic = false,
       additionalModel,
       schema = {},
       isExcludePrivate = true,
-      isNotConsideredSameMts
-    } = {}
-  ) {
+      isNotDataConverted = false,
+      isNotConsideredSameMts = false
+    } = { ...opts }
     const filterModelName = filterModelNameMap.get(method)
-
-    const args = normalizeFilterParams(method, reqArgs)
-    checkFilterParams(filterModelName, args)
-
-    const { auth: user } = { ...args }
     const methodColl = {
       ...this._getMethodCollMap().get(method),
       ...schema
     }
-    const params = { ...args.params }
-    const { filter: requestedFilter } = params
     const {
       maxLimit,
       dateFieldName,
       symbolFieldName,
-      sort: _sort,
-      model,
-      dataStructureConverter,
       name
-    } = { ...methodColl }
-    params.limit = maxLimit
-      ? getLimitNotMoreThan(params.limit, maxLimit)
-      : null
-    const _model = { ...model, ...additionalModel }
+    } = methodColl
 
-    const exclude = ['_id']
-    const statusMessagesfilter = getStatusMessagesFilter(
+    const args = normalizeFilterParams(method, reqArgs)
+    checkFilterParams(filterModelName, args)
+    const params = getParams(args, methodColl)
+
+    const { sql, sqlParams } = getQuery(
+      { auth: args.auth, params },
       methodColl,
-      params
+      { ...opts, isNotPrefixed: true }
     )
-    const insertableArrayObjectsFilter = getInsertableArrayObjectsFilter(
-      methodColl,
-      params
-    )
-    const filter = {
-      ...insertableArrayObjectsFilter,
-      ...statusMessagesfilter
-    }
-
-    if (!isPublic) {
-      const { _id } = { ...user }
-
-      if (!Number.isInteger(_id)) {
-        throw new AuthError()
-      }
-
-      exclude.push('user_id')
-      filter.user_id = user._id
-    }
-
-    const {
-      limit,
-      limitVal
-    } = getLimitQuery({ ...params, isNotPrefixed: true })
-    const sort = getOrderQuery(_sort)
-    const {
-      where,
-      values
-    } = getWhereQuery(
-      filter,
-      { requestedFilter, isNotPrefixed: true }
-    )
-    const group = getGroupQuery(methodColl)
-    const subQuery = getSubQuery(methodColl)
-    const projection = getProjectionQuery(
-      _model,
-      exclude,
-      isExcludePrivate
-    )
-
-    const sql = `SELECT ${projection} FROM ${subQuery}
-      ${where}
-      ${group}
-      ${sort}
-      ${limit}`
 
     const _res = await this.query({
       action: MAIN_DB_WORKER_ACTIONS.ALL,
       sql,
-      params: { ...values, ...limitVal }
+      params: sqlParams
     })
-
-    const convertedDataStructure = (
-      typeof dataStructureConverter === 'function'
-    )
-      ? _res.reduce(methodColl.dataStructureConverter, [])
-      : _res
-    const res = convertDataType(convertedDataStructure)
+    const res = isNotDataConverted
+      ? _res
+      : await convertData(_res, methodColl)
 
     if (isPrepareResponse) {
       const _isContainedSameMts = isContainedSameMts(
@@ -687,6 +630,8 @@ class BetterSqliteDAO extends DAO {
         }
       }
 
+      await setImmediatePromise()
+
       return this.findInCollBy(
         method,
         _args,
@@ -696,6 +641,7 @@ class BetterSqliteDAO extends DAO {
           additionalModel,
           schema,
           isExcludePrivate,
+          isNotDataConverted,
           isNotConsideredSameMts: true
         }
       )

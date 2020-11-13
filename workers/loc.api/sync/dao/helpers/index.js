@@ -2,7 +2,6 @@
 
 const {
   mixUserIdToArrData,
-  convertDataType,
   mapObjBySchema,
   isContainedSameMts
 } = require('./utils')
@@ -40,7 +39,6 @@ const manageTransaction = require('./manage-transaction')
 
 module.exports = {
   mixUserIdToArrData,
-  convertDataType,
   mapObjBySchema,
   isContainedSameMts,
   serializeVal,
