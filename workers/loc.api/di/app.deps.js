@@ -99,7 +99,6 @@ module.exports = ({
           ['_ALLOWED_COLLS', TYPES.ALLOWED_COLLS],
           ['_SYNC_API_METHODS', TYPES.SYNC_API_METHODS],
           ['_SYNC_QUEUE_STATES', TYPES.SYNC_QUEUE_STATES],
-          ['_prepareResponse', TYPES.PrepareResponse],
           ['_subAccount', TYPES.SubAccount],
           ['_progress', TYPES.Progress],
           ['_syncSchema', TYPES.SyncSchema],

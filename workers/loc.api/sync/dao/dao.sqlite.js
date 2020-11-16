@@ -34,7 +34,6 @@ const {
   filterModelNameMap,
   getTableCreationQuery,
   getTriggerCreationQuery,
-  isContainedSameMts,
   getTablesNamesQuery,
   normalizeUserData,
   getUsersIds,
@@ -56,9 +55,10 @@ const {
 } = require('../schema/const')
 
 const {
-  getParams,
+  getArgs,
   getQuery,
-  convertData
+  convertData,
+  prepareDbResponse
 } = require('./helpers/find-in-coll-by')
 
 class SqliteDAO extends DAO {
@@ -647,34 +647,23 @@ class SqliteDAO extends DAO {
     opts
   ) {
     const {
-      isPrepareResponse = false,
-      isPublic = false,
-      additionalModel,
       schema = {},
-      isExcludePrivate = true,
-      isNotDataConverted = false,
-      isNotConsideredSameMts
+      isNotDataConverted = false
     } = { ...opts }
     const filterModelName = filterModelNameMap.get(method)
     const methodColl = {
       ...this._getMethodCollMap().get(method),
       ...schema
     }
-    const {
-      maxLimit,
-      dateFieldName,
-      symbolFieldName,
-      name
-    } = methodColl
 
     const args = normalizeFilterParams(method, reqArgs)
     checkFilterParams(filterModelName, args)
-    const params = getParams(args, methodColl)
+    const _args = getArgs(args, methodColl)
 
     const { sql, sqlParams } = getQuery(
-      { auth: args.auth, params },
+      _args,
       methodColl,
-      { ...opts, isNotPrefixed: true }
+      { ...opts, isNotPrefixed: false }
     )
 
     const _res = await this._all(sql, sqlParams)
@@ -682,61 +671,16 @@ class SqliteDAO extends DAO {
       ? _res
       : await convertData(_res, methodColl)
 
-    if (isPrepareResponse) {
-      const _isContainedSameMts = isContainedSameMts(
-        res,
-        dateFieldName,
-        params.limit
-      )
-
-      if (
-        isNotConsideredSameMts ||
-        !_isContainedSameMts
-      ) {
-        const symbols = (
-          params.symbol &&
-          Array.isArray(params.symbol) &&
-          params.symbol.length > 1
-        ) ? params.symbol : []
-
-        return this.prepareResponse(
-          res,
-          dateFieldName,
-          params.limit,
-          params.notThrowError,
-          params.notCheckNextPage,
-          symbols,
-          symbolFieldName,
-          name
-        )
-      }
-
-      const _args = {
-        ...args,
-        params: {
-          ...args.params,
-          limit: maxLimit
-        }
-      }
-
-      await setImmediatePromise()
-
-      return this.findInCollBy(
+    return prepareDbResponse(
+      res,
+      _args,
+      methodColl,
+      {
+        ...opts,
         method,
-        _args,
-        {
-          isPrepareResponse,
-          isPublic,
-          additionalModel,
-          schema,
-          isExcludePrivate,
-          isNotDataConverted,
-          isNotConsideredSameMts: true
-        }
-      )
-    }
-
-    return res
+        findInCollByFn: () => this.findInCollBy()
+      }
+    )
   }
 
   /**
@@ -1021,7 +965,6 @@ decorate(injectable(), SqliteDAO)
 decorate(inject(TYPES.DB), SqliteDAO, 0)
 decorate(inject(TYPES.TABLES_NAMES), SqliteDAO, 1)
 decorate(inject(TYPES.SyncSchema), SqliteDAO, 2)
-decorate(inject(TYPES.PrepareResponse), SqliteDAO, 3)
-decorate(inject(TYPES.DbMigratorFactory), SqliteDAO, 4)
+decorate(inject(TYPES.DbMigratorFactory), SqliteDAO, 3)
 
 module.exports = SqliteDAO

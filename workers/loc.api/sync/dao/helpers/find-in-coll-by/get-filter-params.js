@@ -13,7 +13,7 @@ const getStatusMessagesFilter = require(
 
 module.exports = (args, methodColl, opts) => {
   const { auth, params } = { ...args }
-  const { filter: requestedFilter } = params
+  const { filter: requestedFilter } = { ...params }
   const { isPublic } = { ...opts }
 
   const statusMessagesfilter = getStatusMessagesFilter(

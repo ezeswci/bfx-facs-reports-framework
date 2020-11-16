@@ -1,11 +1,13 @@
 'use strict'
 
-const getParams = require('./helpers/find-in-coll-by/get-params')
-const getQuery = require('./helpers/find-in-coll-by/get-query')
-const convertData = require('./helpers/find-in-coll-by/convert-data')
+const getArgs = require('./get-args')
+const getQuery = require('./get-query')
+const convertData = require('./convert-data')
+const prepareDbResponse = require('./prepare-db-response')
 
 module.exports = {
-  getParams,
+  getArgs,
   getQuery,
-  convertData
+  convertData,
+  prepareDbResponse
 }
