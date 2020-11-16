@@ -135,7 +135,8 @@ class BalanceHistory {
       {
         isPublic: true,
         schema: { maxLimit: null },
-        isExcludePrivate: false
+        isExcludePrivate: false,
+        isNotDataConverted: true
       }
     )
   }
