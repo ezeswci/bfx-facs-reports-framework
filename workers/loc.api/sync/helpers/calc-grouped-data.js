@@ -1,5 +1,7 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const { pick, omit, orderBy } = require('lodash')
 
 const _getDataKeys = (data) => {
@@ -22,7 +24,7 @@ const _getMaxLength = (data) => {
   )
 }
 
-const _mergeData = (data) => {
+const _mergeData = async (data) => {
   if (
     !data ||
     typeof data !== 'object'
@@ -36,6 +38,10 @@ const _mergeData = (data) => {
   const res = []
 
   for (let i = 0; maxLength > i; i += 1) {
+    if ((i % 10) === 0) {
+      await setImmediatePromise()
+    }
+
     dataKeys.forEach(key => {
       const { mts, vals } = { ..._data[key][i] }
 
@@ -47,25 +53,21 @@ const _mergeData = (data) => {
       ) {
         return
       }
-      if (
-        res.length === 0 ||
-        res.every(item => mts !== item.mts)
-      ) {
-        res.push({
-          mts,
-          [key]: { ...vals }
-        })
 
-        return
-      }
-
-      res.forEach((item, index) => {
+      for (const [index, item] of res.entries()) {
         if (mts === item.mts) {
           res[index] = {
             ...item,
             [key]: { ...vals }
           }
+
+          return
         }
+      }
+
+      res.push({
+        mts,
+        [key]: { ...vals }
       })
     })
   }
@@ -101,6 +103,11 @@ const _getReducer = (
 ) => {
   return async (asyncAccum, item, i, arr) => {
     const accum = await asyncAccum
+
+    if ((i % 10) === 0) {
+      await setImmediatePromise()
+    }
+
     const res = await calcDataItem(item, i, arr, accum)
 
     if (
@@ -128,13 +135,13 @@ const _getReducer = (
   }
 }
 
-module.exports = (
+module.exports = async (
   data,
   isSubCalc,
   calcDataItem = _calcDataItem,
   isReverse
 ) => {
-  const _data = _mergeData(data)
+  const _data = await _mergeData(data)
   const reducer = _getReducer(
     isSubCalc,
     isReverse,
