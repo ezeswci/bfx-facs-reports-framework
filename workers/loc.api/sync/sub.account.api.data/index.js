@@ -1,5 +1,7 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const {
   decorate,
   injectable
@@ -174,6 +176,7 @@ class SubAccountApiData {
     const errors = []
     const promises = argsArr.map(async (args) => {
       try {
+        await setImmediatePromise()
         const res = await method(args)
 
         return res
@@ -199,7 +202,10 @@ class SubAccountApiData {
       throw err
     }
 
-    const mergedRes = resArr.reduce((accum, curr) => {
+    const mergedRes = await resArr.reduce(async (promise, curr) => {
+      const accum = await promise
+      await setImmediatePromise()
+
       const { res } = Array.isArray(curr)
         ? { res: curr }
         : { ...curr }
@@ -214,18 +220,21 @@ class SubAccountApiData {
       return accum
     }, [])
 
+    await setImmediatePromise()
     const orderedRes = orderBy(mergedRes, [datePropName], ['desc'])
 
     if (isNotPreparedResponse) {
       return orderedRes
     }
 
+    await setImmediatePromise()
     const limitedRes = Number.isInteger(limit)
       ? orderedRes.slice(0, limit)
       : orderedRes
 
     const firstElem = { ...limitedRes[0] }
     const mts = firstElem[datePropName]
+    await setImmediatePromise()
     const isNotContainedSameMts = limitedRes.some((item) => {
       const _item = { ...item }
       const _mts = _item[datePropName]
@@ -235,6 +244,8 @@ class SubAccountApiData {
     const res = isNotContainedSameMts
       ? limitedRes
       : orderedRes
+
+    await setImmediatePromise()
 
     return prepareResponse(
       res,
