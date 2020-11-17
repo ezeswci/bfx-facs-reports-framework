@@ -588,7 +588,7 @@ class BetterSqliteDAO extends DAO {
       {
         ...opts,
         method,
-        findInCollByFn: () => this.findInCollBy()
+        findInCollByFn: (...args) => this.findInCollBy(...args)
       }
     )
   }

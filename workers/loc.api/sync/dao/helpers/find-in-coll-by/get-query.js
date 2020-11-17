@@ -17,7 +17,7 @@ module.exports = (args, methodColl, opts) => {
   const {
     isPublic,
     additionalModel,
-    isExcludePrivate,
+    isExcludePrivate = true,
     isNotPrefixed = false
   } = { ...opts }
 
