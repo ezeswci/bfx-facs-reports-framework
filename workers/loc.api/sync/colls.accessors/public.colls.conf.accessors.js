@@ -1,5 +1,7 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const {
   pick,
   omit,
@@ -446,7 +448,10 @@ class PublicСollsСonfAccessors {
     const promises = argsArr.map((args) => method(args))
     const apiResArr = await Promise.all(promises)
 
-    const mergedRes = apiResArr.reduce((accum, curr) => {
+    const mergedRes = await apiResArr.reduce(async (promise, curr, i) => {
+      const accum = await promise
+      await setImmediatePromise()
+
       const { res } = Array.isArray(curr)
         ? { res: curr }
         : { ...curr }
@@ -461,13 +466,17 @@ class PublicСollsСonfAccessors {
       return accum
     }, _dbRes)
 
+    await setImmediatePromise()
     const orderedRes = orderBy(mergedRes, [datePropName], ['desc'])
+
+    await setImmediatePromise()
     const limitedRes = Number.isInteger(limit)
       ? orderedRes.slice(0, limit)
       : orderedRes
 
     const firstElem = { ...limitedRes[0] }
     const mts = firstElem[datePropName]
+    await setImmediatePromise()
     const isNotContainedSameMts = limitedRes.some((item) => {
       const _item = { ...item }
       const _mts = _item[datePropName]
@@ -477,6 +486,8 @@ class PublicСollsСonfAccessors {
     const res = isNotContainedSameMts
       ? limitedRes
       : orderedRes
+
+    await setImmediatePromise()
 
     return prepareResponse(
       res,
