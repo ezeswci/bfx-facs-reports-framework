@@ -1,5 +1,7 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const moment = require('moment')
 const {
   decorate,
@@ -49,7 +51,13 @@ class WinLoss {
       return null
     }
 
-    return positionsSnapshot.reduce((accum, curr) => {
+    return positionsSnapshot.reduce(async (promise, curr, i) => {
+      const accum = await promise
+
+      if ((i % 100) === 0) {
+        await setImmediatePromise()
+      }
+
       const { plUsd } = { ...curr }
       const symb = 'USD'
 
@@ -216,16 +224,23 @@ class WinLoss {
     }, startWallets)
   }
 
-  _shiftMtsToNextTimeframe (
+  async _shiftMtsToNextTimeframe (
     groupedData,
     timeframe
   ) {
-    return groupedData.map((item, i) => {
+    const res = []
+
+    for (const [i, item] of groupedData.entries()) {
+      if ((i % 100) === 0) {
+        await setImmediatePromise()
+      }
       if (
         i === (groupedData.length - 1) ||
         i === 0
       ) {
-        return { ...item }
+        res.push({ ...item })
+
+        continue
       }
 
       const normalizedMtsByTimeframe = getStartMtsByTimeframe(
@@ -246,8 +261,10 @@ class WinLoss {
 
       const mts = mtsMoment.valueOf()
 
-      return { ...item, mts }
-    })
+      res.push({ ...item, mts })
+    }
+
+    return res
   }
 
   async getWinLoss ({
@@ -369,7 +386,7 @@ class WinLoss {
       mts: start,
       USD: 0
     })
-    const res = this._shiftMtsToNextTimeframe(
+    const res = await this._shiftMtsToNextTimeframe(
       groupedData,
       timeframe
     )
