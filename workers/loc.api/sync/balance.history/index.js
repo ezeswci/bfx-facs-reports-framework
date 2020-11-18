@@ -1,5 +1,7 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const { isEmpty } = require('lodash')
 const moment = require('moment')
 const {
@@ -23,13 +25,15 @@ class BalanceHistory {
     wallets,
     FOREX_SYMBS,
     currencyConverter,
-    SYNC_API_METHODS
+    SYNC_API_METHODS,
+    ALLOWED_COLLS
   ) {
     this.dao = dao
     this.wallets = wallets
     this.FOREX_SYMBS = FOREX_SYMBS
     this.currencyConverter = currencyConverter
     this.SYNC_API_METHODS = SYNC_API_METHODS
+    this.ALLOWED_COLLS = ALLOWED_COLLS
   }
 
   _groupWalletsByCurrency (wallets = []) {
@@ -53,14 +57,18 @@ class BalanceHistory {
   _calcWalletsInTimeframe (firstWallets) {
     let wallets = [...firstWallets]
 
-    return (data) => {
+    return async (data) => {
+      await setImmediatePromise()
+
       const missingWallets = wallets.filter(w => (
         data.every(({ type, currency }) => (
           w.type !== type || w.currency !== currency
         ))
       ))
+      await setImmediatePromise()
 
       wallets = [...data, ...missingWallets]
+      await setImmediatePromise()
 
       return this._groupWalletsByCurrency(wallets)
     }
@@ -129,14 +137,17 @@ class BalanceHistory {
     const _start = start
       ? mtsMoment
       : start
-    return this.dao.findInCollBy(
-      this.SYNC_API_METHODS.CANDLES,
-      { params: { start: _start, end, timeframe: '1D' } },
+
+    return this.dao.getElemsInCollBy(
+      this.ALLOWED_COLLS.CANDLES,
       {
-        isPublic: true,
-        schema: { maxLimit: null },
-        isExcludePrivate: false,
-        isNotDataConverted: true
+        filter: {
+          $eq: { _timeframe: '1D' },
+          $lte: { mts: end },
+          $gte: { mts: _start }
+        },
+        sort: [['mts', -1]],
+        projection: ['mts', 'close', '_symbol']
       }
     )
   }
@@ -179,7 +190,7 @@ class BalanceHistory {
   ) {
     let prevRes = { ...firstWallets }
 
-    return (
+    return async (
       {
         walletsGroupedByTimeframe = {},
         mtsGroupedByTimeframe: { mts } = {}
@@ -192,21 +203,30 @@ class BalanceHistory {
       const walletsArr = isReturnedPrevRes
         ? Object.entries(prevRes)
         : Object.entries(walletsGroupedByTimeframe)
-      const res = walletsArr.reduce((
-        accum,
-        [currency, balance]
+      const res = await walletsArr.reduce(async (
+        promise,
+        [currency, balance],
+        i
       ) => {
+        const accum = await promise
+
         const _isForexSymb = isForexSymb(currency, this.FOREX_SYMBS)
-        const price = _isForexSymb
-          ? null
-          : this._getCandlesClosePrice(
+        let price = null
+
+        if ((i % 100) === 0) {
+          await setImmediatePromise()
+        }
+        if (!_isForexSymb) {
+          await setImmediatePromise()
+
+          price = this._getCandlesClosePrice(
             candles,
             mts,
             timeframe,
             `t${currency}USD`,
             currenciesSynonymous
           )
-
+        }
         if (!_isForexSymb && !Number.isFinite(price)) {
           return { ...accum }
         }
@@ -244,7 +264,7 @@ class BalanceHistory {
     }
   }
 
-  _convertForexToUsd (
+  async _convertForexToUsd (
     obj,
     candles,
     mts,
@@ -257,20 +277,27 @@ class BalanceHistory {
       return {}
     }
 
-    const resInUsd = dataArr.reduce((accum, [symb, balance]) => {
+    const resInUsd = await dataArr.reduce(async (
+      promise,
+      [symb, balance],
+      i
+    ) => {
+      const accum = await promise
+
+      if ((i % 10) === 0) {
+        await setImmediatePromise()
+      }
       if (symb === 'USD') {
         return accum + balance
       }
 
-      const prise = {
-        ...this._getCandlesClosePrice(
-          candles,
-          mts,
-          timeframe,
-          `t${symb}USD`,
-          currenciesSynonymous
-        )
-      }
+      const prise = this._getCandlesClosePrice(
+        candles,
+        mts,
+        timeframe,
+        `t${symb}USD`,
+        currenciesSynonymous
+      )
 
       if (
         !Number.isFinite(prise) ||
@@ -390,12 +417,22 @@ class BalanceHistory {
       end
     }
 
-    const firstWallets = await this.wallets.getWallets({
+    const firstWalletsPromise = this.wallets.getWallets({
       auth,
       params: { end: start }
     })
-    const wallets = await this._getWallets(args)
-    const candles = await this._getCandles(args)
+    const walletsPromise = this._getWallets(args)
+    const candlesPromise = this._getCandles(args)
+
+    const [
+      firstWallets,
+      wallets,
+      candles
+    ] = await Promise.all([
+      firstWalletsPromise,
+      walletsPromise,
+      candlesPromise
+    ])
 
     const firstWalletsGroupedByCurrency = this._groupWalletsByCurrency(
       firstWallets
@@ -447,5 +484,6 @@ decorate(inject(TYPES.Wallets), BalanceHistory, 1)
 decorate(inject(TYPES.FOREX_SYMBS), BalanceHistory, 2)
 decorate(inject(TYPES.CurrencyConverter), BalanceHistory, 3)
 decorate(inject(TYPES.SYNC_API_METHODS), BalanceHistory, 4)
+decorate(inject(TYPES.ALLOWED_COLLS), BalanceHistory, 5)
 
 module.exports = BalanceHistory
