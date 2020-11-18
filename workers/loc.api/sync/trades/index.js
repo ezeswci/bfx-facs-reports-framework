@@ -1,5 +1,7 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const {
   decorate,
   injectable,
@@ -36,6 +38,8 @@ class Trades {
 
     this.tradesMethodColl = this.syncSchema.getMethodCollMap()
       .get(this.SYNC_API_METHODS.TRADES)
+    this.tradesModel = this.syncSchema.getModelsMap()
+      .get(this.ALLOWED_COLLS.TRADES)
   }
 
   async _getTrades ({
@@ -53,8 +57,6 @@ class Trades {
     )
       ? { $in: { symbol } }
       : {}
-    const tradesModel = this.syncSchema.getModelsMap()
-      .get(this.ALLOWED_COLLS.TRADES)
 
     return this.dao.getElemsInCollBy(
       this.ALLOWED_COLLS.TRADES,
@@ -66,15 +68,21 @@ class Trades {
           ...symbFilter
         },
         sort: [['mtsCreate', -1]],
-        projection: tradesModel,
+        projection: this.tradesModel,
         exclude: ['user_id'],
         isExcludePrivate: true
       }
     )
   }
 
-  _calcAmounts (data = []) {
-    return data.map((trade = {}) => {
+  async _calcAmounts (data = []) {
+    const res = []
+
+    for (const [i, trade = {}] of data.entries()) {
+      if ((i % 100) === 0) {
+        await setImmediatePromise()
+      }
+
       const {
         execAmount,
         execPrice,
@@ -122,17 +130,27 @@ class Trades {
         ? _feeForCurrConv * execPrice
         : _feeForCurrConv
 
-      return {
+      res.push({
         ...trade,
         calcAmount,
         feeUsd,
         feeForCurrConv
-      }
-    }, {})
+      })
+    }
+
+    return res
   }
 
   _calcTrades (fieldName) {
-    return (data = []) => data.reduce((accum, trade = {}) => {
+    return (
+      data = []
+    ) => data.reduce(async (promise, trade = {}, i) => {
+      const accum = await promise
+
+      if ((i % 100) === 0) {
+        await setImmediatePromise()
+      }
+
       const _trade = { ...trade }
       const value = _trade[fieldName]
 
@@ -208,7 +226,7 @@ class Trades {
     } = this.tradesMethodColl
 
     const trades = await this._getTrades(args)
-    const calcedTradesAmount = this._calcAmounts(
+    const calcedTradesAmount = await this._calcAmounts(
       trades
     )
     const convertedTrades = await this.currencyConverter
