@@ -38,6 +38,12 @@ class WinLoss {
     this.FOREX_SYMBS = FOREX_SYMBS
     this.authenticator = authenticator
     this.SYNC_API_METHODS = SYNC_API_METHODS
+
+    this.movementsModel = this.syncSchema.getModelsMap()
+      .get(this.ALLOWED_COLLS.MOVEMENTS)
+    this.movementsMethodColl = this.syncSchema.getMethodCollMap()
+      .get(this.SYNC_API_METHODS.MOVEMENTS)
+    this.movementsSymbolFieldName = this.movementsMethodColl.symbolFieldName
   }
 
   async _getPlFromPositionsSnapshot (args) {
@@ -156,7 +162,13 @@ class WinLoss {
     symbolFieldName,
     symbol = []
   ) {
-    return data.reduce((accum, movement = {}) => {
+    return data.reduce(async (promise, movement = {}, i) => {
+      const accum = await promise
+
+      if ((i % 100) === 0) {
+        await setImmediatePromise()
+      }
+
       const { amount, amountUsd } = { ...movement }
       const currSymb = movement[symbolFieldName]
       const _isForexSymb = isForexSymb(currSymb, symbol)
@@ -287,15 +299,27 @@ class WinLoss {
         end
       }
     }
-    const movementsModel = this.syncSchema.getModelsMap()
-      .get(this.ALLOWED_COLLS.MOVEMENTS)
-    const movementsMethodColl = this.syncSchema.getMethodCollMap()
-      .get(this.SYNC_API_METHODS.MOVEMENTS)
-    const {
-      symbolFieldName: movementsSymbolFieldName
-    } = movementsMethodColl
 
-    const withdrawals = await this.dao.getElemsInCollBy(
+    const walletsGroupedByTimeframePromise = this.balanceHistory
+      .getBalanceHistory(
+        args,
+        true
+      )
+    const firstWalletsPromise = this.wallets.getWallets({
+      auth,
+      params: { end: start }
+    })
+
+    const startPlPromise = this._getPlFromPositionsSnapshot({
+      auth,
+      params: { start }
+    })
+    const endPlPromise = this._getPlFromPositionsSnapshot({
+      auth,
+      params: { end }
+    })
+
+    const withdrawalsPromise = this.dao.getElemsInCollBy(
       this.ALLOWED_COLLS.MOVEMENTS,
       {
         filter: {
@@ -306,12 +330,12 @@ class WinLoss {
           user_id: user._id
         },
         sort: [['mtsStarted', -1]],
-        projection: movementsModel,
+        projection: this.movementsModel,
         exclude: ['user_id'],
         isExcludePrivate: true
       }
     )
-    const deposits = await this.dao.getElemsInCollBy(
+    const depositsPromise = this.dao.getElemsInCollBy(
       this.ALLOWED_COLLS.MOVEMENTS,
       {
         filter: {
@@ -322,51 +346,58 @@ class WinLoss {
           user_id: user._id
         },
         sort: [['mtsUpdated', -1]],
-        projection: movementsModel,
+        projection: this.movementsModel,
         exclude: ['user_id'],
         isExcludePrivate: true
       }
     )
-    const withdrawalsGroupedByTimeframe = await groupByTimeframe(
+
+    const [
+      withdrawals,
+      deposits,
+      firstWallets,
+      startPl,
+      endPl
+    ] = await Promise.all([
+      withdrawalsPromise,
+      depositsPromise,
+      firstWalletsPromise,
+      startPlPromise,
+      endPlPromise
+    ])
+
+    const withdrawalsGroupedByTimeframePromise = groupByTimeframe(
       withdrawals,
       { timeframe, start, end },
       this.FOREX_SYMBS,
       'mtsStarted',
-      movementsSymbolFieldName,
+      this.movementsSymbolFieldName,
       this._calcMovements.bind(this)
     )
-    const depositsGroupedByTimeframe = await groupByTimeframe(
+    const depositsGroupedByTimeframePromise = groupByTimeframe(
       deposits,
       { timeframe, start, end },
       this.FOREX_SYMBS,
       'mtsUpdated',
-      movementsSymbolFieldName,
+      this.movementsSymbolFieldName,
       this._calcMovements.bind(this)
     )
 
-    const firstWallets = await this.wallets.getWallets({
-      auth,
-      params: { end: start }
-    })
+    const [
+      withdrawalsGroupedByTimeframe,
+      depositsGroupedByTimeframe,
+      walletsGroupedByTimeframe
+    ] = await Promise.all([
+      withdrawalsGroupedByTimeframePromise,
+      depositsGroupedByTimeframePromise,
+      walletsGroupedByTimeframePromise
+    ])
+
     const startWallets = this._getStartWallets()
     const startWalletsInForex = this._calcFirstWallets(
       firstWallets,
       startWallets
     )
-    const walletsGroupedByTimeframe = await this.balanceHistory
-      .getBalanceHistory(
-        args,
-        true
-      )
-
-    const startPl = await this._getPlFromPositionsSnapshot({
-      auth,
-      params: { start }
-    })
-    const endPl = await this._getPlFromPositionsSnapshot({
-      auth,
-      params: { end }
-    })
 
     const groupedData = await calcGroupedData(
       {
