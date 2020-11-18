@@ -1,5 +1,7 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const { orderBy } = require('lodash')
 
 const {
@@ -257,6 +259,8 @@ class PositionsSnapshot {
     const tickers = []
 
     for (const position of positions) {
+      await setImmediatePromise()
+
       const {
         symbol,
         basePrice,
@@ -341,7 +345,7 @@ class PositionsSnapshot {
     }
   }
 
-  _filterDuplicate (accum = [], curr = []) {
+  async _filterDuplicate (accum = [], curr = []) {
     if (
       !Array.isArray(accum) ||
       accum.length === 0
@@ -349,15 +353,25 @@ class PositionsSnapshot {
       return [...curr]
     }
 
-    const keys = Object.keys(accum[0]).filter(key => !/^_/.test(key))
+    const keys = Object.keys(accum[0])
+      .filter(key => !/^_/.test(key))
+    const res = []
 
-    return curr.filter(currItem => {
-      return accum.every(accumItem => {
+    for (const currItem of curr) {
+      await setImmediatePromise()
+
+      const isPushed = accum.every(accumItem => {
         return keys.some(key => {
           return accumItem[key] !== currItem[key]
         })
       })
-    })
+
+      if (isPushed) {
+        res.push(currItem)
+      }
+    }
+
+    return res
   }
 
   async _getPositionsAudit (
@@ -377,6 +391,8 @@ class PositionsSnapshot {
       let serialRequestsCount = 0
 
       while (true) {
+        await setImmediatePromise()
+
         const _res = await this.rService.getPositionsAudit(
           null,
           { auth, params: { id: [id], end, limit: 250 } }
@@ -438,7 +454,7 @@ class PositionsSnapshot {
           break
         }
 
-        const resWithoutDuplicate = this._filterDuplicate(
+        const resWithoutDuplicate = await this._filterDuplicate(
           singleIdRes,
           res
         )
@@ -516,14 +532,23 @@ class PositionsSnapshot {
       tickers: []
     }
 
-    const positionsHistory = await this._getPositionsHistory(
+    const positionsHistoryPromise = this._getPositionsHistory(
       user,
       end
     )
-    const activePositions = await this._getActivePositions(
+    const activePositionsPromise = this._getActivePositions(
       auth,
       end
     )
+
+    const [
+      positionsHistory,
+      activePositions
+    ] = await Promise.all([
+      positionsHistoryPromise,
+      activePositionsPromise
+    ])
+
     const positions = this._mergePositions(
       positionsHistory,
       activePositions
