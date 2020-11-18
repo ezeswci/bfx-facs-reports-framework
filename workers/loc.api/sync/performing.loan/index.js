@@ -1,5 +1,7 @@
 'use strict'
 
+const { promisify } = require('util')
+const setImmediatePromise = promisify(setImmediate)
 const {
   decorate,
   injectable,
@@ -94,7 +96,7 @@ class PerformingLoan {
     })
   }
 
-  _findMaxBalanceBetweenMtsFromStart (
+  async _findMaxBalanceBetweenMtsFromStart (
     balances,
     {
       end,
@@ -104,7 +106,11 @@ class PerformingLoan {
   ) {
     let maxBalance = null
 
-    for (const ledger of balances) {
+    for (const [i, ledger] of balances.entries()) {
+      if ((i % 100) === 0) {
+        await setImmediatePromise()
+      }
+
       const {
         mts,
         currency,
@@ -128,7 +134,7 @@ class PerformingLoan {
     return maxBalance
   }
 
-  _findMaxBalanceBetweenMtsFromEnd (
+  async _findMaxBalanceBetweenMtsFromEnd (
     balances,
     {
       end,
@@ -140,7 +146,11 @@ class PerformingLoan {
 
     let maxBalance = null
 
-    for (const ledger of backIterableBalances) {
+    for (const [i, ledger] of backIterableBalances.entries()) {
+      if ((i % 100) === 0) {
+        await setImmediatePromise()
+      }
+
       const {
         mts,
         currency,
@@ -236,13 +246,19 @@ class PerformingLoan {
     return (Math.pow(1 + amount / balance, 365) - 1) * 100
   }
 
-  _calcDailyPercs (data, balances) {
+  async _calcDailyPercs (data, balances) {
     let prevMts = 0
 
-    const percsGroupedByDays = data.reduce(
-      (accum, ledger = {}) => {
+    const percsGroupedByDays = await data.reduce(
+      async (promise, ledger = {}, i) => {
+        const accum = await promise
+
+        if ((i % 100) === 0) {
+          await setImmediatePromise()
+        }
+
         const { amount, mts, currency } = { ...ledger }
-        const maxBalance = this._findMaxBalanceBetweenMts(
+        const maxBalance = await this._findMaxBalanceBetweenMts(
           balances,
           {
             end: mts,
@@ -274,14 +290,28 @@ class PerformingLoan {
       []
     )
 
-    return percsGroupedByDays.map((percs) => {
-      return this._calcPercsArr(percs)
-    })
+    const res = []
+
+    for (const [i, percs] of percsGroupedByDays.entries()) {
+      if ((i % 100) === 0) {
+        await setImmediatePromise()
+      }
+
+      res.push(this._calcPercsArr(percs))
+    }
+
+    return res
   }
 
   _calcLedgers (balances) {
-    return (data = []) => {
-      const res = data.reduce((accum, ledger = {}) => {
+    return async (data = []) => {
+      const res = await data.reduce(async (promise, ledger = {}, i) => {
+        const accum = await promise
+
+        if ((i % 100) === 0) {
+          await setImmediatePromise()
+        }
+
         const { amountUsd } = { ...ledger }
 
         if (!Number.isFinite(amountUsd)) {
@@ -295,7 +325,7 @@ class PerformingLoan {
             : amountUsd
         }
       }, {})
-      const dailyPercs = this._calcDailyPercs(data, balances)
+      const dailyPercs = await this._calcDailyPercs(data, balances)
 
       return {
         ...res,
