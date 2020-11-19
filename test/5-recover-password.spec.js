@@ -94,9 +94,7 @@ describe('Recover password', () => {
 
     await rmAllFiles(tempDirPath, ['README.md'])
     await rmDB(dbDirPath)
-    const env = await startEnvironment(false, false, 1, {
-      dbDriver: 'sqlite'
-    })
+    const env = await startEnvironment(false, false, 1)
 
     wrkReportServiceApi = env.wrksReportServiceApi[0]
 

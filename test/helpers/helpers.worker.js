@@ -21,6 +21,7 @@ const startWorkers = (
     syncMode: true,
     isSchedulerEnabled: true,
     schedulerRule: '0 */5 * * *',
+    isSqliteStoredInMemory: true,
     ...conf
   }
 

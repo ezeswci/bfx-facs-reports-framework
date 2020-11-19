@@ -73,9 +73,7 @@ describe('Sync mode API with SQLite', () => {
 
     await rmAllFiles(tempDirPath, ['README.md'])
     await rmDB(dbDirPath)
-    const env = await startEnvironment(false, false, 1, {
-      dbDriver: 'sqlite'
-    })
+    const env = await startEnvironment(false, false, 1)
 
     wrkReportServiceApi = env.wrksReportServiceApi[0]
     params.processorQueue = wrkReportServiceApi.lokue_processor.q

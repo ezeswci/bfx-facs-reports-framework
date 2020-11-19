@@ -8,7 +8,18 @@ const {
 } = require('../../workers/loc.api/sync/helpers')
 const TYPES = require('../../workers/loc.api/di/types')
 
-const connToSQLite = () => {
+const connToSQLite = async () => {
+  const { dbDriver } = container.get(TYPES.CONF)
+  const rService = container.get(TYPES.RService)
+
+  if (dbDriver === 'better-sqlite') {
+    const { db } = container.get(TYPES.DB)
+
+    await rService._initialize(db)
+
+    return db
+  }
+
   return new Promise((resolve, reject) => {
     const db = new SqliteDb.Database(':memory:', async (err) => {
       if (err) {
@@ -17,7 +28,7 @@ const connToSQLite = () => {
         return
       }
 
-      await container.get(TYPES.RService)._initialize(db)
+      await rService._initialize(db)
       resolve(db)
     })
   })

@@ -74,7 +74,7 @@
       }
     },
     "test": {
-      "command": "standard && mocha './workers/**/__test__/*.spec.js' './test/**/*.spec.js' --config .mocharc.json",
+      "command": "standard && mocha './workers/**/__test__/*.spec.js' './test/**/*.spec.js' --config .mocharc.json --dbDriver=better-sqlite",
       "env": {
         "NODE_ENV": "test"
       }
@@ -86,7 +86,7 @@
       }
     },
     "testDev": {
-      "command": "standard && mocha --recursive test/**/*-dev.spec.js --exit --timeout 10000",
+      "command": "standard && mocha --recursive test/**/*-dev.spec.js --exit --timeout 10000 --dbDriver=better-sqlite",
       "env": {
         "NODE_ENV": "test"
       }
