@@ -16,8 +16,7 @@ const {
   startEnvironment
 } = require('./helpers/helpers.boot')
 const {
-  connToSQLite,
-  closeSQLite,
+  emptyDB,
   getRServiceProxy
 } = require('./helpers/helpers.core')
 const {
@@ -38,7 +37,6 @@ const {
 
 let wrkReportServiceApi = null
 let mockRESTv2Srv = null
-let db = null
 
 const basePath = '/api'
 const tempDirPath = path.join(__dirname, '..', 'workers/loc.api/queue/temp')
@@ -125,14 +123,13 @@ describe('Sub-account', () => {
 
     rService._authenticator.rService = rServiceProxy
 
-    db = await connToSQLite()
+    await emptyDB()
   })
 
   after(async function () {
     this.timeout(5000)
 
     await stopEnvironment()
-    await closeSQLite(db)
     await rmDB(dbDirPath)
     await rmAllFiles(tempDirPath, ['README.md'])
 
@@ -363,8 +360,7 @@ describe('Sub-account', () => {
     const beforeFn = async function () {
       this.timeout(20000)
 
-      await closeSQLite(db)
-      db = await connToSQLite()
+      await emptyDB()
 
       signUpTestCase(
         agent,
