@@ -206,7 +206,7 @@ const _getCompareOpAndKey = (
   if (compareOperator === SQL_OPERATORS.LIKE) {
     return {
       compareOperator,
-      key: ` ${key} ${SQL_OPERATORS.ESCAPE} "\\"`
+      key: ` ${key} ${SQL_OPERATORS.ESCAPE} '\\'`
     }
   }
 
