@@ -49,32 +49,45 @@ class CurrencyConverter {
     this.candlesTimeframe = '1D'
     this.candlesSchema = this.syncSchema.getMethodCollMap()
       .get(this.SYNC_API_METHODS.CANDLES)
+
+    this.currenciesUpdatedAt = new Date()
+    this.currencies = []
   }
 
   async getCurrenciesSynonymous () {
-    let currencies = await this.dao.getElemsInCollBy(
-      this.ALLOWED_COLLS.CURRENCIES
-    )
+    const mtsDiff = new Date() - this.currenciesUpdatedAt
 
     if (
-      !Array.isArray(currencies) ||
-      currencies.length === 0
+      mtsDiff > (20 * 60 * 1000) ||
+      !Array.isArray(this.currencies) ||
+      this.currencies.length === 0
     ) {
-      try {
-        currencies = await this.rService._getCurrencies()
+      this.currencies = await this.dao.getElemsInCollBy(
+        this.ALLOWED_COLLS.CURRENCIES
+      )
 
-        if (
-          !Array.isArray(currencies) ||
-          currencies.length === 0
-        ) {
+      if (
+        !Array.isArray(this.currencies) ||
+        this.currencies.length === 0
+      ) {
+        try {
+          this.currencies = await this.rService._getCurrencies()
+
+          if (
+            !Array.isArray(this.currencies) ||
+            this.currencies.length === 0
+          ) {
+            return new Map()
+          }
+        } catch (err) {
           return new Map()
         }
-      } catch (err) {
-        return new Map()
       }
     }
 
-    const synonymous = currencies.reduce((accum, curr) => {
+    this.currenciesUpdatedAt = new Date()
+
+    const synonymous = this.currencies.reduce((accum, curr) => {
       const { id, walletFx } = { ...curr }
       const _walletFx = Array.isArray(walletFx)
         ? walletFx
