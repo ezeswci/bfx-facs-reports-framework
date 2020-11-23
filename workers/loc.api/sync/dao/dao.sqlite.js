@@ -367,6 +367,14 @@ class SqliteDAO extends DAO {
     return this._run(`PRAGMA cache_size = ${size}`)
   }
 
+  _setAnalysisLimit (limit = 1000) {
+    return this._run(`PRAGMA analysis_limit = ${limit}`)
+  }
+
+  optimize () {
+    return this._run('PRAGMA optimize')
+  }
+
   enableForeignKeys () {
     return this._run('PRAGMA foreign_keys = ON')
   }
@@ -395,6 +403,7 @@ class SqliteDAO extends DAO {
     await this.enableForeignKeys()
     await this._enableWALJournalMode()
     await this._setCacheSize()
+    await this._setAnalysisLimit()
   }
 
   /**

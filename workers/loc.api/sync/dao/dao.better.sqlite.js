@@ -206,6 +206,20 @@ class BetterSqliteDAO extends DAO {
     })
   }
 
+  _setAnalysisLimit (limit = 1000) {
+    return this.query({
+      action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      sql: `analysis_limit = ${limit}`
+    })
+  }
+
+  optimize () {
+    return this.query({
+      action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      sql: 'optimize'
+    })
+  }
+
   enableForeignKeys () {
     return this.query({
       action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
@@ -240,6 +254,7 @@ class BetterSqliteDAO extends DAO {
     await this.enableForeignKeys()
     await this._enableWALJournalMode()
     await this._setCacheSize()
+    await this._setAnalysisLimit()
   }
 
   /**
