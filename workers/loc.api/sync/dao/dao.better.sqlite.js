@@ -199,6 +199,13 @@ class BetterSqliteDAO extends DAO {
     this._initializeWalCheckpointRestart()
   }
 
+  _setCacheSize (size = 10000) {
+    return this.query({
+      action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
+      sql: `cache_size = ${size}`
+    })
+  }
+
   enableForeignKeys () {
     return this.query({
       action: MAIN_DB_WORKER_ACTIONS.EXEC_PRAGMA,
@@ -232,6 +239,7 @@ class BetterSqliteDAO extends DAO {
   async beforeMigrationHook () {
     await this.enableForeignKeys()
     await this._enableWALJournalMode()
+    await this._setCacheSize()
   }
 
   /**

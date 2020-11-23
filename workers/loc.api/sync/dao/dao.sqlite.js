@@ -363,6 +363,10 @@ class SqliteDAO extends DAO {
     }, 10000).unref()
   }
 
+  _setCacheSize (size = 10000) {
+    return this._run(`PRAGMA cache_size = ${size}`)
+  }
+
   enableForeignKeys () {
     return this._run('PRAGMA foreign_keys = ON')
   }
@@ -390,6 +394,7 @@ class SqliteDAO extends DAO {
   async beforeMigrationHook () {
     await this.enableForeignKeys()
     await this._enableWALJournalMode()
+    await this._setCacheSize()
   }
 
   /**
