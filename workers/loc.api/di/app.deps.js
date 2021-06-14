@@ -16,6 +16,9 @@ const TABLES_NAMES = require('../sync/schema/tables-names')
 const ALLOWED_COLLS = require('../sync/schema/allowed.colls')
 const SYNC_API_METHODS = require('../sync/schema/sync.api.methods')
 const SYNC_QUEUE_STATES = require('../sync/sync.queue/sync.queue.states')
+const CHECKER_NAMES = require(
+  '../sync/data.consistency.checker/checker.names'
+)
 const WSTransport = require('../ws-transport')
 const WSEventEmitter = require(
   '../ws-transport/ws.event.emitter'
@@ -26,6 +29,13 @@ const syncSchema = require('../sync/schema')
 const Sync = require('../sync')
 const SyncInterrupter = require('../sync/sync.interrupter')
 const SyncQueue = require('../sync/sync.queue')
+const SyncCollsManager = require('../sync/sync.colls.manager')
+const Checkers = require(
+  '../sync/data.consistency.checker/checkers'
+)
+const DataConsistencyChecker = require(
+  '../sync/data.consistency.checker'
+)
 const {
   redirectRequestsToApi,
   FOREX_SYMBS
@@ -99,6 +109,7 @@ module.exports = ({
           ['_ALLOWED_COLLS', TYPES.ALLOWED_COLLS],
           ['_SYNC_API_METHODS', TYPES.SYNC_API_METHODS],
           ['_SYNC_QUEUE_STATES', TYPES.SYNC_QUEUE_STATES],
+          ['_CHECKER_NAMES', TYPES.CHECKER_NAMES],
           ['_prepareResponse', TYPES.PrepareResponse],
           ['_subAccount', TYPES.SubAccount],
           ['_progress', TYPES.Progress],
@@ -118,7 +129,9 @@ module.exports = ({
           ['_positionsAudit', TYPES.PositionsAudit],
           ['_orderTrades', TYPES.OrderTrades],
           ['_authenticator', TYPES.Authenticator],
-          ['_privResponder', TYPES.PrivResponder]
+          ['_privResponder', TYPES.PrivResponder],
+          ['_syncCollsManager', TYPES.SyncCollsManager],
+          ['_dataConsistencyChecker', TYPES.DataConsistencyChecker]
         ]
       })
     rebind(TYPES.RServiceDepsSchemaAliase)
@@ -140,6 +153,7 @@ module.exports = ({
     bind(TYPES.ALLOWED_COLLS).toConstantValue(ALLOWED_COLLS)
     bind(TYPES.SYNC_API_METHODS).toConstantValue(SYNC_API_METHODS)
     bind(TYPES.SYNC_QUEUE_STATES).toConstantValue(SYNC_QUEUE_STATES)
+    bind(TYPES.CHECKER_NAMES).toConstantValue(CHECKER_NAMES)
     bind(TYPES.GRC_BFX_OPTS).toConstantValue(grcBfxOpts)
     bind(TYPES.FOREX_SYMBS).toConstantValue(FOREX_SYMBS)
     bind(TYPES.WSTransport)
@@ -241,6 +255,15 @@ module.exports = ({
       .to(RecalcSubAccountLedgersBalancesHook)
     bind(TYPES.SyncQueue)
       .to(SyncQueue)
+      .inSingletonScope()
+    bind(TYPES.SyncCollsManager)
+      .to(SyncCollsManager)
+      .inSingletonScope()
+    bind(TYPES.Checkers)
+      .to(Checkers)
+      .inSingletonScope()
+    bind(TYPES.DataConsistencyChecker)
+      .to(DataConsistencyChecker)
       .inSingletonScope()
     bind(TYPES.Sync)
       .to(Sync)
