@@ -8,6 +8,7 @@ module.exports = {
   ALLOWED_COLLS: Symbol.for('ALLOWED_COLLS'),
   SYNC_API_METHODS: Symbol.for('SYNC_API_METHODS'),
   SYNC_QUEUE_STATES: Symbol.for('SYNC_QUEUE_STATES'),
+  CHECKER_NAMES: Symbol.for('CHECKER_NAMES'),
   FrameworkRServiceDepsSchema: Symbol.for('FrameworkRServiceDepsSchema'),
   GRC_BFX_OPTS: Symbol.for('GRC_BFX_OPTS'),
   ApiMiddlewareHandlerAfter: Symbol.for('ApiMiddlewareHandlerAfter'),
@@ -54,5 +55,8 @@ module.exports = {
   Crypto: Symbol.for('Crypto'),
   Authenticator: Symbol.for('Authenticator'),
   PrivResponder: Symbol.for('PrivResponder'),
-  SyncInterrupter: Symbol.for('SyncInterrupter')
+  SyncInterrupter: Symbol.for('SyncInterrupter'),
+  SyncCollsManager: Symbol.for('SyncCollsManager'),
+  Checkers: Symbol.for('Checkers'),
+  DataConsistencyChecker: Symbol.for('DataConsistencyChecker')
 }
