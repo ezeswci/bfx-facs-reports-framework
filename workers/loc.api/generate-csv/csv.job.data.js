@@ -1,9 +1,5 @@
 'use strict'
 
-const {
-  decorate,
-  inject
-} = require('inversify')
 const BaseCsvJobData = require(
   'bfx-report/workers/loc.api/generate-csv/csv.job.data'
 )
@@ -12,13 +8,18 @@ const {
   checkJobAndGetUserData
 } = require('bfx-report/workers/loc.api/helpers')
 
-const TYPES = require('../di/types')
-
 const {
   checkParams,
   getDateString
 } = require('../helpers')
 
+const { decorateInjectable } = require('../di/utils')
+
+const depsTypes = (TYPES) => [
+  TYPES.RService,
+  TYPES.FullSnapshotReportCsvWriter,
+  TYPES.FullTaxReportCsvWriter
+]
 class CsvJobData extends BaseCsvJobData {
   constructor (
     rService,
@@ -233,26 +234,42 @@ class CsvJobData extends BaseCsvJobData {
       uInfo
     )
     const { params } = { ...args }
-    const { chunkCommonFolder } = { ...opts }
+    const { username } = { ...uInfo }
+
     const {
+      end,
       isStartSnapshot,
       isEndSnapshot
     } = { ...params }
-    const isBaseNameInName = isStartSnapshot || isEndSnapshot
-    const typeName = isStartSnapshot
+    const {
+      isFullTaxReport,
+      chunkCommonFolder: _chunkCommonFolder
+    } = { ...opts }
+    const _typeName = isStartSnapshot
       ? 'START_SNAPSHOT'
       : 'END_SNAPSHOT'
-    const fileName = isBaseNameInName
+    const typeName = (isStartSnapshot || isEndSnapshot)
+      ? _typeName
+      : 'MOMENT'
+    const fileName = isFullTaxReport
       ? `full-tax-report_${typeName}`
-      : 'full-snapshot-report'
+      : `full-snapshot-report_${typeName}`
+
+    const endDate = end
+      ? getDateString(end)
+      : getDateString()
+    const uName = username ? `${username}_` : ''
+    const chunkCommonFolder = (
+      _chunkCommonFolder &&
+      typeof _chunkCommonFolder === 'string'
+    )
+      ? _chunkCommonFolder
+      : `${uName}full-snapshot-report_TO_${endDate}`
 
     const csvArgs = getCsvArgs(
       args,
       null,
-      {
-        isOnMomentInName: !isBaseNameInName,
-        isBaseNameInName
-      }
+      { isBaseNameInName: true }
     )
 
     const jobData = {
@@ -367,7 +384,10 @@ class CsvJobData extends BaseCsvJobData {
         },
         uId,
         uInfo,
-        { chunkCommonFolder }
+        {
+          chunkCommonFolder,
+          isFullTaxReport: true
+        }
       )
     }
 
@@ -424,7 +444,8 @@ class CsvJobData extends BaseCsvJobData {
           amount: 'AMOUNT',
           fees: 'FEES',
           destinationAddress: 'DESCRIPTION',
-          transactionId: 'TRANSACTION ID'
+          transactionId: 'TRANSACTION ID',
+          note: 'NOTE'
         },
         periodBalances: {
           walletsTotalBalanceUsd: 'WALLETS TOTAL BALANCE USD',
@@ -573,8 +594,6 @@ class CsvJobData extends BaseCsvJobData {
   }
 }
 
-decorate(inject(TYPES.RService), CsvJobData, 0)
-decorate(inject(TYPES.FullSnapshotReportCsvWriter), CsvJobData, 1)
-decorate(inject(TYPES.FullTaxReportCsvWriter), CsvJobData, 2)
+decorateInjectable(CsvJobData, depsTypes)
 
 module.exports = CsvJobData
