@@ -1,15 +1,9 @@
 'use strict'
 
 const {
-  decorate,
-  injectable,
-  inject
-} = require('inversify')
-const {
   AuthError
 } = require('bfx-report/workers/loc.api/errors')
 
-const TYPES = require('../../di/types')
 const {
   isSubAccountApiKeys,
   getSubAccountAuthFromAuth
@@ -20,6 +14,14 @@ const {
   UserRemovingError
 } = require('../../errors')
 
+const { decorateInjectable } = require('../../di/utils')
+
+const depsTypes = (TYPES) => [
+  TYPES.DAO,
+  TYPES.TABLES_NAMES,
+  TYPES.Authenticator,
+  TYPES.Sync
+]
 class SubAccount {
   constructor (
     dao,
@@ -62,7 +64,8 @@ class SubAccount {
             'apiSecret',
             'timezone',
             'username',
-            'password'
+            'password',
+            'isNotProtected'
           ],
           isDecryptedApiKeys: true,
           isReturnedPassword: true,
@@ -70,12 +73,17 @@ class SubAccount {
         }
       )
 
-    const _subAccountPassword = (
+    const isSubAccountPwdEntered = (
       subAccountPassword &&
       typeof subAccountPassword === 'string'
     )
+    const _subAccountPassword = isSubAccountPwdEntered
       ? subAccountPassword
       : masterUser.password
+    const isNotProtected = (
+      !isSubAccountPwdEntered &&
+      masterUser.isNotProtected
+    )
 
     if (
       isSubAccountApiKeys(masterUser) ||
@@ -89,7 +97,8 @@ class SubAccount {
     const subAccount = {
       ...masterUser,
       ...getSubAccountAuthFromAuth(masterUser),
-      password: _subAccountPassword
+      password: _subAccountPassword,
+      isNotProtected
     }
 
     return this.dao.executeQueriesInTrans(async () => {
@@ -140,28 +149,28 @@ class SubAccount {
         )
         const auth = isAuthCheckedInDb
           ? await this.authenticator.verifyUser(
-            {
-              auth: {
-                email,
-                password,
-                token
+              {
+                auth: {
+                  email,
+                  password,
+                  token
+                }
+              },
+              {
+                projection: [
+                  '_id',
+                  'id',
+                  'email',
+                  'apiKey',
+                  'apiSecret',
+                  'timezone',
+                  'username'
+                ],
+                isDecryptedApiKeys: true,
+                isNotInTrans: true,
+                withoutWorkerThreads: true
               }
-            },
-            {
-              projection: [
-                '_id',
-                'id',
-                'email',
-                'apiKey',
-                'apiSecret',
-                'timezone',
-                'username'
-              ],
-              isDecryptedApiKeys: true,
-              isNotInTrans: true,
-              withoutWorkerThreads: true
-            }
-          )
+            )
           : { apiKey, apiSecret }
 
         if (
@@ -187,7 +196,8 @@ class SubAccount {
             {
               auth: {
                 ...auth,
-                password: _subAccountPassword
+                password: _subAccountPassword,
+                isNotProtected
               }
             },
             {
@@ -406,28 +416,28 @@ class SubAccount {
         )
         const auth = isAuthCheckedInDb
           ? await this.authenticator.verifyUser(
-            {
-              auth: {
-                email,
-                password,
-                token
+              {
+                auth: {
+                  email,
+                  password,
+                  token
+                }
+              },
+              {
+                projection: [
+                  '_id',
+                  'id',
+                  'email',
+                  'apiKey',
+                  'apiSecret',
+                  'timezone',
+                  'username'
+                ],
+                isDecryptedApiKeys: true,
+                isNotInTrans: true,
+                withoutWorkerThreads: true
               }
-            },
-            {
-              projection: [
-                '_id',
-                'id',
-                'email',
-                'apiKey',
-                'apiSecret',
-                'timezone',
-                'username'
-              ],
-              isDecryptedApiKeys: true,
-              isNotInTrans: true,
-              withoutWorkerThreads: true
-            }
-          )
+            )
           : { apiKey, apiSecret }
 
         const existedSubUser = subUsers.find((subUser) => (
@@ -552,10 +562,6 @@ class SubAccount {
   }
 }
 
-decorate(injectable(), SubAccount)
-decorate(inject(TYPES.DAO), SubAccount, 0)
-decorate(inject(TYPES.TABLES_NAMES), SubAccount, 1)
-decorate(inject(TYPES.Authenticator), SubAccount, 2)
-decorate(inject(TYPES.Sync), SubAccount, 3)
+decorateInjectable(SubAccount, depsTypes)
 
 module.exports = SubAccount
