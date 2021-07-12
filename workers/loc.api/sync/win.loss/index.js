@@ -49,20 +49,13 @@ class WinLoss {
     this.movementsMethodColl = this.syncSchema.getMethodCollMap()
       .get(this.SYNC_API_METHODS.MOVEMENTS)
     this.movementsSymbolFieldName = this.movementsMethodColl.symbolFieldName
+    this.positionsSnapshotMethodColl = this.syncSchema.getMethodCollMap()
+      .get(this.SYNC_API_METHODS.POSITIONS_SNAPSHOT)
+    this.positionsSnapshotSymbolFieldName = this.positionsSnapshotMethodColl.symbolFieldName
   }
 
-  async _getPlFromPositionsSnapshot (args) {
-    const positionsSnapshot = await this.positionsSnapshot
-      .getSyncedPositionsSnapshot(args)
-
-    if (
-      !Array.isArray(positionsSnapshot) ||
-      positionsSnapshot.length === 0
-    ) {
-      return null
-    }
-
-    return positionsSnapshot.reduce((accum, curr) => {
+  async _calcPlFromPositionsSnapshots (data = []) {
+    return data.reduce((accum, curr) => {
       const { plUsd } = { ...curr }
       const symb = 'USD'
 
@@ -104,21 +97,16 @@ class WinLoss {
   }
 
   _getWinLossByTimeframe (
-    startWalletsVals = {},
-    startPl = {},
-    endPl = {}
+    startWalletsVals = {}
   ) {
     let prevMovementsRes = {}
 
     return ({
       walletsGroupedByTimeframe = {},
       withdrawalsGroupedByTimeframe = {},
-      depositsGroupedByTimeframe = {}
-    } = {}, i) => {
-      const isLast = i === 0
-      const _startPl = { ...startPl }
-      const _endPl = isLast ? { ...endPl } : {}
-
+      depositsGroupedByTimeframe = {},
+      plGroupedByTimeframe = {}
+    } = {}) => {
       prevMovementsRes = this._sumMovementsWithPrevRes(
         prevMovementsRes,
         { ...withdrawalsGroupedByTimeframe },
@@ -135,14 +123,10 @@ class WinLoss {
         const movements = Number.isFinite(prevMovementsRes[symb])
           ? prevMovementsRes[symb]
           : 0
-        const _startPlVal = Number.isFinite(_startPl[symb])
-          ? _startPl[symb]
+        const pl = Number.isFinite(plGroupedByTimeframe[symb])
+          ? plGroupedByTimeframe[symb]
           : 0
-        const _endPlVal = Number.isFinite(_endPl[symb])
-          ? _endPl[symb]
-          : 0
-        const res = (wallet - startWallet - movements) +
-          (_startPlVal + _endPlVal)
+        const res = (wallet - startWallet - movements) + pl
 
         if (!res) {
           return { ...accum }
@@ -297,14 +281,8 @@ class WinLoss {
       params: { end: start }
     })
 
-    const startPlPromise = this._getPlFromPositionsSnapshot({
-      auth,
-      params: { start }
-    })
-    const endPlPromise = this._getPlFromPositionsSnapshot({
-      auth,
-      params: { end }
-    })
+    const dailyPositionsSnapshotsPromise = this.positionsSnapshot
+      .getSyncedPositionsSnapshot(args)
 
     const withdrawalsPromise = this.dao.getElemsInCollBy(
       this.ALLOWED_COLLS.MOVEMENTS,
@@ -343,14 +321,12 @@ class WinLoss {
       withdrawals,
       deposits,
       firstWallets,
-      startPl,
-      endPl
+      dailyPositionsSnapshots
     ] = await Promise.all([
       withdrawalsPromise,
       depositsPromise,
       firstWalletsPromise,
-      startPlPromise,
-      endPlPromise
+      dailyPositionsSnapshotsPromise
     ])
 
     const withdrawalsGroupedByTimeframePromise = groupByTimeframe(
@@ -369,15 +345,25 @@ class WinLoss {
       this.movementsSymbolFieldName,
       this._calcMovements.bind(this)
     )
+    const plGroupedByTimeframePromise = groupByTimeframe(
+      dailyPositionsSnapshots,
+      { timeframe, start, end },
+      this.FOREX_SYMBS,
+      'mtsUpdate',
+      this.positionsSnapshotSymbolFieldName,
+      this._calcPlFromPositionsSnapshots.bind(this)
+    )
 
     const [
       withdrawalsGroupedByTimeframe,
       depositsGroupedByTimeframe,
-      walletsGroupedByTimeframe
+      walletsGroupedByTimeframe,
+      plGroupedByTimeframe
     ] = await Promise.all([
       withdrawalsGroupedByTimeframePromise,
       depositsGroupedByTimeframePromise,
-      walletsGroupedByTimeframePromise
+      walletsGroupedByTimeframePromise,
+      plGroupedByTimeframePromise
     ])
 
     const startWallets = this._getStartWallets()
@@ -390,14 +376,11 @@ class WinLoss {
       {
         walletsGroupedByTimeframe,
         withdrawalsGroupedByTimeframe,
-        depositsGroupedByTimeframe
+        depositsGroupedByTimeframe,
+        plGroupedByTimeframe
       },
       false,
-      this._getWinLossByTimeframe(
-        startWalletsInForex,
-        startPl,
-        endPl
-      ),
+      this._getWinLossByTimeframe(startWalletsInForex),
       true
     )
     groupedData.push({
