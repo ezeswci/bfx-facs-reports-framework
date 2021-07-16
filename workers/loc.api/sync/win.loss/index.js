@@ -44,6 +44,8 @@ class WinLoss {
     this.authenticator = authenticator
     this.SYNC_API_METHODS = SYNC_API_METHODS
 
+    this.positionsHistoryModel = this.syncSchema.getModelsMap()
+      .get(this.ALLOWED_COLLS.POSITIONS_HISTORY)
     this.movementsModel = this.syncSchema.getModelsMap()
       .get(this.ALLOWED_COLLS.MOVEMENTS)
     this.movementsMethodColl = this.syncSchema.getMethodCollMap()
@@ -287,6 +289,20 @@ class WinLoss {
 
     const dailyPositionsSnapshotsPromise = this.positionsSnapshot
       .getSyncedPositionsSnapshot(args)
+    const positionsHistoryPromise = this.dao.getElemsInCollBy(
+      this.ALLOWED_COLLS.POSITIONS_HISTORY,
+      {
+        filter: {
+          user_id: user._id,
+          $gte: { mtsUpdate: start },
+          $lte: { mtsUpdate: end }
+        },
+        sort: [['mtsUpdate', -1]],
+        projection: this.positionsHistoryModel,
+        exclude: ['user_id'],
+        isExcludePrivate: true
+      }
+    )
 
     const withdrawalsPromise = this.dao.getElemsInCollBy(
       this.ALLOWED_COLLS.MOVEMENTS,
@@ -325,12 +341,14 @@ class WinLoss {
       withdrawals,
       deposits,
       firstWallets,
-      dailyPositionsSnapshots
+      dailyPositionsSnapshots,
+      positionsHistory
     ] = await Promise.all([
       withdrawalsPromise,
       depositsPromise,
       firstWalletsPromise,
-      dailyPositionsSnapshotsPromise
+      dailyPositionsSnapshotsPromise,
+      positionsHistoryPromise
     ])
 
     const withdrawalsGroupedByTimeframePromise = groupByTimeframe(
