@@ -3,11 +3,6 @@
 const moment = require('moment')
 
 const {
-  decorate,
-  injectable,
-  inject
-} = require('inversify')
-const {
   FindMethodError
 } = require('bfx-report/workers/loc.api/errors')
 const {
@@ -22,8 +17,17 @@ const {
   isForexSymb
 } = require('../helpers')
 const { tryParseJSON } = require('../../helpers')
-const TYPES = require('../../di/types')
 
+const { decorateInjectable } = require('../../di/utils')
+
+const depsTypes = (TYPES) => [
+  TYPES.RService,
+  TYPES.DAO,
+  TYPES.SyncSchema,
+  TYPES.FOREX_SYMBS,
+  TYPES.ALLOWED_COLLS,
+  TYPES.SYNC_API_METHODS
+]
 class CurrencyConverter {
   constructor (
     rService,
@@ -155,9 +159,39 @@ class CurrencyConverter {
       return
     }
 
-    return synonymous.map(([symbol, conversion]) => (
-      [`${prefix}${symbol}${lastSymb}`, conversion]
-    ))
+    return synonymous.reduce((accum, [symbol, conversion]) => {
+      const separator = (
+        symbol.length > 3 ||
+        lastSymb.length > 3
+      )
+        ? ':'
+        : ''
+
+      accum.push([
+        `${prefix}${symbol}${separator}${lastSymb}`,
+        conversion
+      ])
+
+      if (
+        symbol.length >= 4 &&
+        /F0$/i.test(symbol)
+      ) {
+        const _symbol = this._getConvertingSymb(symbol)
+        const _separator = (
+          _symbol.length > 3 ||
+          lastSymb.length > 3
+        )
+          ? ':'
+          : ''
+
+        accum.push([
+          `${prefix}${_symbol}${_separator}${lastSymb}`,
+          conversion
+        ])
+      }
+
+      return accum
+    }, [])
   }
 
   async _priceFinder (
@@ -397,13 +431,10 @@ class CurrencyConverter {
       mts
     }
   ) {
-    if (!this._isRequiredConvToForex(convertTo)) {
-      return null
-    }
-
     const end = Number.isInteger(mts)
       ? mts
       : item[dateFieldName]
+    const isRequiredConvToForex = this._isRequiredConvToForex(convertTo)
     const isRequiredConvFromForex = this._isRequiredConvFromForex(
       item,
       {
@@ -433,6 +464,27 @@ class CurrencyConverter {
       }
 
       return btcPriceOut / btcPriceIn
+    }
+    if (!isRequiredConvToForex) {
+      const usdPriceIn = await _getPrice(
+        `t${item[symbolFieldName]}USD`,
+        end
+      )
+      const usdPriceOut = await _getPrice(
+        `t${convertTo}USD`,
+        end
+      )
+
+      if (
+        !usdPriceIn ||
+        !usdPriceOut ||
+        !Number.isFinite(usdPriceIn) ||
+        !Number.isFinite(usdPriceOut)
+      ) {
+        return null
+      }
+
+      return usdPriceIn / usdPriceOut
     }
 
     const price = await _getPrice(
@@ -755,31 +807,61 @@ class CurrencyConverter {
   /**
    * if api is not available convert by candles
    */
-  convert (data, convSchema) {
+  async convert (data, convSchema) {
     try {
-      return this.convertByPublicTrades(data, convSchema)
+      const res = await this.convertByPublicTrades(data, convSchema)
+
+      return res
     } catch (err) {
-      return this.convertByCandles(data, convSchema)
+      const res = await this.convertByCandles(data, convSchema)
+
+      return res
     }
   }
 
   /**
    * if api is not available get price from candles
    */
-  getPrice (
+  async getPrice (
     reqSymb,
-    end
+    mts
   ) {
     try {
-      return this._getPublicTradesPrice(
+      const price = await this._getPublicTradesPrice(
         reqSymb,
-        end
+        mts
       )
+
+      return price
     } catch (err) {
-      return this._getCandleClosedPrice(
-        reqSymb,
-        end
+    // Try to get price from DB when bfx api_v2 is not available
+    // Useful when internet is disconnected
+    // Also it covers pairs like tBTCF0:USTF0
+
+      const price = await this._priceFinder(
+        async (symbol) => {
+          const [firstSymb, lastSymb] = splitSymbolPairs(symbol)
+
+          const res = await this._getPrice(
+            this._COLL_NAMES.CANDLES,
+            { symbol: firstSymb },
+            {
+              convertTo: lastSymb,
+              symbolFieldName: 'symbol',
+              mts
+            }
+          )
+
+          return res
+        },
+        reqSymb
       )
+
+      if (Number.isFinite(price)) {
+        return price
+      }
+
+      throw err
     }
   }
 
@@ -914,12 +996,6 @@ class CurrencyConverter {
   }
 }
 
-decorate(injectable(), CurrencyConverter)
-decorate(inject(TYPES.RService), CurrencyConverter, 0)
-decorate(inject(TYPES.DAO), CurrencyConverter, 1)
-decorate(inject(TYPES.SyncSchema), CurrencyConverter, 2)
-decorate(inject(TYPES.FOREX_SYMBS), CurrencyConverter, 3)
-decorate(inject(TYPES.ALLOWED_COLLS), CurrencyConverter, 4)
-decorate(inject(TYPES.SYNC_API_METHODS), CurrencyConverter, 5)
+decorateInjectable(CurrencyConverter, depsTypes)
 
 module.exports = CurrencyConverter

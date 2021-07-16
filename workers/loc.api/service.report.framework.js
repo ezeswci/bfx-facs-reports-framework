@@ -15,12 +15,12 @@ const {
 
 const ReportService = require('./service.report')
 const {
-  ServerAvailabilityError,
-  DuringSyncMethodAccessError
+  ServerAvailabilityError
 } = require('./errors')
 const {
   checkParams,
   checkParamsAuth,
+  isNotSyncRequired,
   isEnotfoundError,
   isEaiAgainError,
   collObjToArr,
@@ -220,6 +220,11 @@ class FrameworkReportService extends ReportService {
         this._TABLES_NAMES.SYNC_MODE,
         { isEnable: true }
       )
+
+      if (isNotSyncRequired(args)) {
+        return true
+      }
+
       await this._sync.start(true)
 
       return true
@@ -236,14 +241,8 @@ class FrameworkReportService extends ReportService {
           isReturnedUser: true
         }
       )
-      const progress = await this._sync.stop()
 
-      await this._dao.updateRecordOf(
-        this._TABLES_NAMES.SYNC_MODE,
-        { isEnable: false }
-      )
-
-      return progress
+      return true
     }, 'disableSyncMode', cb)
   }
 
@@ -281,8 +280,13 @@ class FrameworkReportService extends ReportService {
         { isEnable: true }
       )
 
-      return this._sync
-        .start(true, this._ALLOWED_COLLS.ALL)
+      if (isNotSyncRequired(args)) {
+        return true
+      }
+
+      await this._sync.start(true)
+
+      return true
     }, 'enableScheduler', args, cb)
   }
 
@@ -325,6 +329,13 @@ class FrameworkReportService extends ReportService {
         ? this._progress.getProgress()
         : false
     }, 'getSyncProgress', args, cb)
+  }
+
+  haveCollsBeenSyncedAtLeastOnce (space, args, cb) {
+    return this._privResponder(() => {
+      return this._syncCollsManager
+        .haveCollsBeenSyncedAtLeastOnce(args)
+    }, 'haveCollsBeenSyncedAtLeastOnce', args, cb)
   }
 
   syncNow (space, args = {}, cb) {
@@ -378,7 +389,13 @@ class FrameworkReportService extends ReportService {
 
       await this._publicСollsСonfAccessors
         .editPublicСollsСonf('publicTradesConf', args)
-      await this._sync.start(true, this._ALLOWED_COLLS.PUBLIC_TRADES)
+
+      if (isNotSyncRequired(args)) {
+        return true
+      }
+
+      await this._sync
+        .start(true, this._ALLOWED_COLLS.PUBLIC_TRADES)
 
       return true
     }, 'editPublicTradesConf', args, cb)
@@ -390,7 +407,13 @@ class FrameworkReportService extends ReportService {
 
       await this._publicСollsСonfAccessors
         .editPublicСollsСonf('tickersHistoryConf', args)
-      await this._sync.start(true, this._ALLOWED_COLLS.TICKERS_HISTORY)
+
+      if (isNotSyncRequired(args)) {
+        return true
+      }
+
+      await this._sync
+        .start(true, this._ALLOWED_COLLS.TICKERS_HISTORY)
 
       return true
     }, 'editTickersHistoryConf', args, cb)
@@ -402,7 +425,13 @@ class FrameworkReportService extends ReportService {
 
       await this._publicСollsСonfAccessors
         .editPublicСollsСonf('statusMessagesConf', args)
-      await this._sync.start(true, this._ALLOWED_COLLS.STATUS_MESSAGES)
+
+      if (isNotSyncRequired(args)) {
+        return true
+      }
+
+      await this._sync
+        .start(true, this._ALLOWED_COLLS.STATUS_MESSAGES)
 
       return true
     }, 'editStatusMessagesConf', args, cb)
@@ -414,7 +443,13 @@ class FrameworkReportService extends ReportService {
 
       await this._publicСollsСonfAccessors
         .editPublicСollsСonf('candlesConf', args)
-      await this._sync.start(true, this._ALLOWED_COLLS.CANDLES)
+
+      if (isNotSyncRequired(args)) {
+        return true
+      }
+
+      await this._sync
+        .start(true, this._ALLOWED_COLLS.CANDLES)
 
       return true
     }, 'editCandlesConf', args, cb)
@@ -426,6 +461,11 @@ class FrameworkReportService extends ReportService {
 
       const syncedColls = await this._publicСollsСonfAccessors
         .editAllPublicСollsСonfs(args)
+
+      if (isNotSyncRequired(args)) {
+        return true
+      }
+
       await this._sync.start(true, syncedColls)
 
       return true
@@ -496,6 +536,12 @@ class FrameworkReportService extends ReportService {
         return collObjToArr(res, field)
       })
 
+      const res = await Promise.all(promises)
+
+      if (res.some(isEmpty)) {
+        return super.getSymbols(space, args)
+      }
+
       const [
         symbols,
         futures,
@@ -503,16 +549,7 @@ class FrameworkReportService extends ReportService {
         mapSymbols,
         inactiveCurrencies,
         inactiveSymbols
-      ] = await Promise.all(promises)
-
-      if (
-        isEmpty(symbols) &&
-        isEmpty(futures) &&
-        isEmpty(currencies) &&
-        isEmpty(inactiveSymbols)
-      ) {
-        return super.getSymbols(space, args)
-      }
+      ] = res
 
       const pairs = [...symbols, ...futures]
 
@@ -1103,9 +1140,8 @@ class FrameworkReportService extends ReportService {
    */
   getWallets (space, args, cb) {
     return this._privResponder(async () => {
-      if (!await this.isSyncModeWithDbData(space, args)) {
-        throw new DuringSyncMethodAccessError()
-      }
+      await this._dataConsistencyChecker
+        .check(this._CHECKER_NAMES.WALLETS, args)
 
       checkParams(args, 'paramsSchemaForWallets')
 
@@ -1115,9 +1151,8 @@ class FrameworkReportService extends ReportService {
 
   getBalanceHistory (space, args, cb) {
     return this._privResponder(async () => {
-      if (!await this.isSyncModeWithDbData(space, args)) {
-        throw new DuringSyncMethodAccessError()
-      }
+      await this._dataConsistencyChecker
+        .check(this._CHECKER_NAMES.BALANCE_HISTORY, args)
 
       checkParams(args, 'paramsSchemaForBalanceHistoryApi')
 
@@ -1127,9 +1162,8 @@ class FrameworkReportService extends ReportService {
 
   getWinLoss (space, args, cb) {
     return this._privResponder(async () => {
-      if (!await this.isSyncModeWithDbData(space, args)) {
-        throw new DuringSyncMethodAccessError()
-      }
+      await this._dataConsistencyChecker
+        .check(this._CHECKER_NAMES.WIN_LOSS, args)
 
       checkParams(args, 'paramsSchemaForWinLossApi')
 
@@ -1139,9 +1173,8 @@ class FrameworkReportService extends ReportService {
 
   getPositionsSnapshot (space, args, cb) {
     return this._privResponder(async () => {
-      if (!await this.isSyncModeWithDbData(space, args)) {
-        throw new DuringSyncMethodAccessError()
-      }
+      await this._dataConsistencyChecker
+        .check(this._CHECKER_NAMES.POSITIONS_SNAPSHOT, args)
 
       checkParams(args, 'paramsSchemaForPositionsSnapshotApi')
 
@@ -1151,9 +1184,8 @@ class FrameworkReportService extends ReportService {
 
   getFullSnapshotReport (space, args, cb) {
     return this._privResponder(async () => {
-      if (!await this.isSyncModeWithDbData(space, args)) {
-        throw new DuringSyncMethodAccessError()
-      }
+      await this._dataConsistencyChecker
+        .check(this._CHECKER_NAMES.FULL_SNAPSHOT_REPORT, args)
 
       checkParams(args, 'paramsSchemaForFullSnapshotReportApi')
 
@@ -1163,9 +1195,8 @@ class FrameworkReportService extends ReportService {
 
   getFullTaxReport (space, args, cb) {
     return this._privResponder(async () => {
-      if (!await this.isSyncModeWithDbData(space, args)) {
-        throw new DuringSyncMethodAccessError()
-      }
+      await this._dataConsistencyChecker
+        .check(this._CHECKER_NAMES.FULL_TAX_REPORT, args)
 
       checkParams(args, 'paramsSchemaForFullTaxReportApi')
 
@@ -1175,9 +1206,8 @@ class FrameworkReportService extends ReportService {
 
   getTradedVolume (space, args, cb) {
     return this._privResponder(async () => {
-      if (!await this.isSyncModeWithDbData(space, args)) {
-        throw new DuringSyncMethodAccessError()
-      }
+      await this._dataConsistencyChecker
+        .check(this._CHECKER_NAMES.TRADED_VOLUME, args)
 
       checkParams(args, 'paramsSchemaForTradedVolumeApi')
 
@@ -1187,9 +1217,8 @@ class FrameworkReportService extends ReportService {
 
   getFeesReport (space, args, cb) {
     return this._privResponder(async () => {
-      if (!await this.isSyncModeWithDbData(space, args)) {
-        throw new DuringSyncMethodAccessError()
-      }
+      await this._dataConsistencyChecker
+        .check(this._CHECKER_NAMES.FEES_REPORT, args)
 
       checkParams(args, 'paramsSchemaForFeesReportApi')
 
@@ -1199,9 +1228,8 @@ class FrameworkReportService extends ReportService {
 
   getPerformingLoan (space, args, cb) {
     return this._privResponder(async () => {
-      if (!await this.isSyncModeWithDbData(space, args)) {
-        throw new DuringSyncMethodAccessError()
-      }
+      await this._dataConsistencyChecker
+        .check(this._CHECKER_NAMES.PERFORMING_LOAN, args)
 
       checkParams(args, 'paramsSchemaForPerformingLoanApi')
 
